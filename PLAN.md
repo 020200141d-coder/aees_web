@@ -11,13 +11,17 @@ Pista de lo que está hecho y lo que sigue. Marca `[x]` al terminar cada punto.
 - [x] Despliegue preparado: Render (`render.yaml`) y Vercel (`vercel.json`)
 
 ## Fase 1 — Sitio público
-- [x] Intro con sonido (Web Audio), hero con foto real, haces de luz y ecualizador interactivo
+- [x] Logo del negocio vectorizado con ondas animadas (header, hero, footer, favicon)
+- [x] Botón de volumen en el header (sin pantalla de entrada) y títulos que suenan al pasar el mouse
+- [x] Hero con foto real, haces de luz y ecualizador interactivo
 - [x] Cinta de marcas, servicios en carrusel, experiencias (boda, electrónica, corporativo)
 - [x] Catálogo con filtros, ficha en modal y disponibilidad por fecha
 - [x] Combos con adicionales de precio especial
 - [x] Galería de eventos realizados con filtros y vista ampliada
 - [x] Contacto con formulario y WhatsApp; 404 con estilo
-- [ ] Fotos reales de cada equipo (subirlas desde Admin → Equipos)
+- [x] Fotos referenciales con licencia libre (Wikimedia Commons) en 15 equipos, con crédito
+- [x] Recorte por proporción y conversión a WebP al subir fotos
+- [ ] Fotos propias de cada equipo (subirlas desde Admin → Equipos)
 - [ ] Video corto de un evento en el hero (opcional)
 
 ## Fase 2 — Panel /admin

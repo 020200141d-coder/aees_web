@@ -70,7 +70,7 @@ body.admin { background: #0a1522; font-size: 0.94rem; }
 
 /* Subir foto */
 .subir-foto { display: grid; grid-template-columns: 120px 1fr; gap: 1rem; align-items: center; }
-.subir-foto .vista { width: 120px; height: 90px; border-radius: 12px; background: var(--tarjeta) center / cover no-repeat; border: 1px dashed var(--borde-fuerte); display: grid; place-items: center; color: var(--texto-suave); }
+.subir-foto .vista { width: 120px; height: auto; aspect-ratio: 4 / 3; border-radius: 12px; background: var(--tarjeta) center / cover no-repeat; border: 1px dashed var(--borde-fuerte); display: grid; place-items: center; color: var(--texto-suave); }
 .subir-foto .vista.con-foto { border-style: solid; }
 .subir-foto .vista.con-foto i { display: none; }
 

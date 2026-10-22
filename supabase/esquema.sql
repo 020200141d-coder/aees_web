@@ -46,7 +46,8 @@ create table if not exists equipos (
   peso_kg            numeric(8,1) default 0,
   largo_cm           integer default 0,
   imagen             text default '',
-  imagen_fuente      text default '',
+  imagen_fuente      text default '',          -- crédito de la foto (autor · licencia)
+  imagen_fuente_url  text default '',          -- página de la foto (obligatorio en licencias CC BY)
   estado             text not null default 'operativo' check (estado in ('operativo','mantenimiento','baja')),
   publicado          boolean not null default true,
   destacado          boolean not null default false,

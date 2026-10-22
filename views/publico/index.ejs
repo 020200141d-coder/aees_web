@@ -16,21 +16,7 @@
 <%- include('../partials/head') %>
 <body class="portada">
 
-<%# Intro: aparece una vez por sesión. Sin JavaScript se oculta (noscript). %>
-<div class="intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="intro-titulo">
-  <div class="intro-logo">
-    <div class="intro-ondas" aria-hidden="true"><span></span><span></span><span></span>
-      <div class="intro-eq"><% for (let i = 0; i < 9; i++) { %><i style="--i:<%= i %>"></i><% } %></div>
-    </div>
-    <h1 id="intro-titulo">AeeS<span class="texto-acento">.</span>Acústico</h1>
-    <p>Sonido, luces y pantallas para eventos en Cusco y el Valle Sagrado.</p>
-    <div class="intro-acciones">
-      <button class="btn btn-primario magnetico" data-intro="sonido"><i class="fa-solid fa-volume-high"></i> Entrar con sonido</button>
-      <button class="btn btn-ghost" data-intro="silencio">Entrar sin sonido</button>
-    </div>
-  </div>
-</div>
-<noscript><style>.intro{display:none}.hero-anim,[data-reveal]{opacity:1!important;translate:none!important}</style></noscript>
+<noscript><style>.hero-anim,[data-reveal]{opacity:1!important;translate:none!important}</style></noscript>
 
 <%- include('../partials/header') %>
 
@@ -44,9 +30,11 @@
     <div class="contenedor">
       <div class="hero-contenido">
         <span class="etiqueta hero-anim"><span class="punto-vivo"></span> Reservas abiertas · Cusco y Valle Sagrado</span>
-        <h1 class="hero-anim">
+        <h1 class="hero-anim hero-logo">
           <span class="h1-sub">Rental de equipos audiovisuales</span>
-          AeeS <span class="texto-acento">Acústico</span>
+          <%# El logo es el título: las letras reaccionan al mouse y las ondas vibran (más rápido con sonido). %>
+          <span class="oculto-accesible">AeeS Acústico</span>
+          <span aria-hidden="true"><%- include('../partials/logo', { completo: true, clase: 'logo-hero' }) %></span>
         </h1>
         <p class="hero-rol hero-anim" aria-label="Bodas, fiestas electrónicas, conciertos, eventos corporativos">
           <span class="prompt">&gt;_</span>
@@ -265,7 +253,7 @@
       <p class="sin-resultados" data-vacio="equipos" hidden>No hay equipos en esta categoría todavía.</p>
     </div>
     <%# Datos para el modal: viajan como JSON para no hacer otra petición al abrirlo. %>
-    <script type="application/json" id="datos-equipos"><%- JSON.stringify(equipos.map(e => ({ id: e.id, nombre: e.nombre, marca: e.marca, modelo: e.modelo, categoria: e.categoria, categoriaLabel: CATEGORIAS[e.categoria].label, icono: CATEGORIAS[e.categoria].icono, descripcion: e.descripcion, precio: e.precio, precio_mayor: e.precio_mayor, mayor_desde: e.mayor_desde, ajuste_sin_dmx: e.ajuste_sin_dmx, cantidad_total: e.cantidad_total, potencia_w: e.potencia_w, spl_db: e.spl_db, cobertura_personas: e.cobertura_personas, dimensiones: e.dimensiones, peso_kg: e.peso_kg, estado: e.estado }))).replace(/</g, '\\u003c') %></script>
+    <script type="application/json" id="datos-equipos"><%- JSON.stringify(equipos.map(e => ({ id: e.id, nombre: e.nombre, marca: e.marca, modelo: e.modelo, categoria: e.categoria, categoriaLabel: CATEGORIAS[e.categoria].label, icono: CATEGORIAS[e.categoria].icono, descripcion: e.descripcion, precio: e.precio, precio_mayor: e.precio_mayor, mayor_desde: e.mayor_desde, ajuste_sin_dmx: e.ajuste_sin_dmx, cantidad_total: e.cantidad_total, potencia_w: e.potencia_w, spl_db: e.spl_db, cobertura_personas: e.cobertura_personas, dimensiones: e.dimensiones, peso_kg: e.peso_kg, estado: e.estado, imagen_fuente: e.imagen_fuente, imagen_fuente_url: e.imagen_fuente_url }))).replace(/</g, '\\u003c') %></script>
   </section>
 
   <!-- ================= GALERÍA DE EVENTOS ================= -->
@@ -394,6 +382,7 @@
       <h3 id="modal-titulo"></h3>
       <p id="modal-detalle"></p>
       <div class="ficha" id="modal-ficha"></div>
+      <p class="credito-foto" id="modal-credito" hidden></p>
       <div class="modal-nav">
         <button class="btn btn-ghost btn-sm" data-modal-nav="-1"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
         <button class="btn btn-primario btn-sm" id="modal-agregar"><i class="fa-solid fa-plus"></i> Agregar a mi evento</button>

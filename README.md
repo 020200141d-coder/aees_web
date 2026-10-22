@@ -107,8 +107,10 @@ npm run semilla
 
 `vercel.json` y `api/index.js` ya están listos: importa el repositorio en vercel.com y agrega las mismas variables. En Vercel **es obligatorio usar Supabase**, porque no hay disco permanente.
 
-## 8. Fotos
+## 8. Logo y fotos
 
-- Eventos realizados y portada: fotos propias de AeeS Acústico (`public/img/eventos/`).
-- Equipos sin foto: ilustraciones SVG propias según el tipo de equipo. Desde **Admin → Equipos** se puede subir la foto real de cada equipo.
+- **Logo:** las letras "AeeS" y "ACÚSTICO" son el trazo original del logo del negocio, vectorizado; las ondas se redibujaron. Archivos: `public/img/logo-aees.svg` (completo), `logo-aees-compacto.svg` (header y favicon) y `logo-aees.png`. En el sitio se incrusta desde `views/partials/logo.ejs` para animar las ondas.
+- **Eventos realizados y portada:** fotos propias de AeeS Acústico (`public/img/eventos/`).
+- **Equipos:** fotos referenciales del modelo con licencia libre de Wikimedia Commons (CC BY, CC BY-SA o dominio público) en `public/img/equipos/`. Cada una muestra su autor, licencia y enlace en el detalle del equipo, como piden esas licencias. Los equipos sin foto libre usan una ilustración SVG. Lo ideal es reemplazarlas por fotos propias desde **Admin → Equipos**.
+- **Subir fotos:** el panel abre un recortador con la proporción donde se mostrará la foto (4:3 equipos, 16:10 combos, 16:9 portada) y la guarda en WebP de máximo 1600 px, para que ninguna foto deforme las tarjetas.
 - Mapas © colaboradores de OpenStreetMap.

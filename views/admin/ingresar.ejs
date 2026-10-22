@@ -14,7 +14,7 @@
 <body class="admin">
   <main class="ingreso-admin">
     <form class="tarjeta" method="post" action="/admin/ingresar" style="display:grid;gap:1rem">
-      <a href="/" class="logo"><span class="logo-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>AeeS<b>.</b>Panel</span></a>
+      <a href="/" class="logo"><%- include('../partials/logo', { clase: 'logo-header' }) %><span>Panel</span></a>
       <div><h1 style="font-size:1.6rem">Ingreso del personal</h1><p class="suave">Administradores y publicadores.</p></div>
       <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
       <input type="hidden" name="_csrf" value="<%= csrf %>">

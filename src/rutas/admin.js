@@ -156,7 +156,9 @@ function leerEquipo(b) {
     peso_kg: numero(b.peso_kg, 0),
     largo_cm: entero(b.largo_cm),
     imagen: urlImagen(b.imagen),
-    imagen_fuente: texto(b.imagen_fuente, 120),
+    imagen_fuente: texto(b.imagen_fuente, 160),
+    // Enlace a la página de la foto: las licencias Creative Commons piden citar autor y fuente.
+    imagen_fuente_url: /^https:\/\/\S+$/.test(String(b.imagen_fuente_url || '').trim()) ? String(b.imagen_fuente_url).trim().slice(0, 400) : '',
     estado: ['operativo', 'mantenimiento', 'baja'].includes(b.estado) ? b.estado : 'operativo',
     publicado: marcado(b.publicado),
     destacado: marcado(b.destacado),

@@ -45,7 +45,7 @@
 
     <h2 style="margin-top:1.4rem"><i class="fa-regular fa-image"></i> Foto y publicación</h2>
     <div class="form-rejilla">
-      <%- include('_foto', { nombre: 'imagen', valor: c.imagen, error: errores.imagen }) %>
+      <%- include('_foto', { nombre: 'imagen', valor: c.imagen, error: errores.imagen, formato: '16:10' }) %>
       <label class="campo-simple">Fuente de la foto<input name="imagen_fuente" value="<%= c.imagen_fuente || '' %>" maxlength="120"></label>
       <div class="casillas ancho">
         <label class="casilla"><input type="checkbox" name="publicado" <%= c.publicado ? 'checked' : '' %>> Publicado</label>

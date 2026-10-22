@@ -5,16 +5,15 @@
 //  spy, progreso, reveal, contadores, texto que se escribe, filtros, modal,
 //  carrusel, tilt, botones magnéticos, cursor, canvas del hero, parallax y
 //  formulario) y suma los del negocio:
-//   • initIntro          puerta de entrada con sonido (una vez por sesión)
 //   • initAgregar        botón + de cada equipo → "Mi evento"
 //   • initCombos         "Reservar este combo"
 //   • initDisponibilidad fecha del catálogo → consulta /api/equipos?fecha=
 //   • initGaleria        lightbox de los eventos realizados
-//   • initSonidoUI       bocina flotante + "tic" al pasar por botones
+//   • initSonidoUI       botón de volumen del header (toca la intro al activarlo)
+//   • initPalabrasSonoras letras de los títulos que saltan y suenan
 //
-//  Flujo al cargar: DOMContentLoaded → se enganchan los init*(); cuando la
-//  intro se cierra (o si no hay intro) se añade body.cargado, que dispara la
-//  entrada animada del hero en el CSS.
+//  Flujo al cargar: DOMContentLoaded → se enganchan los init*() y se añade
+//  body.cargado, que dispara la entrada animada del hero en el CSS.
 // ============================================================================
 
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
@@ -44,34 +43,12 @@ window.aeesToast = toast;
 window.aeesAlerta = alerta;
 
 /* ------------------------------------------------------------------ */
-/* Intro con sonido (solo portada, una vez por sesión)                */
+/* Entrada del hero: body.cargado dispara las animaciones del CSS      */
 /* ------------------------------------------------------------------ */
 function marcarCargado() {
   if (document.body.classList.contains('cargado')) return;
   document.body.classList.add('cargado');
   initTyped();
-}
-
-function initIntro() {
-  const intro = $('#intro');
-  if (!intro) { marcarCargado(); return; }
-  let vista = false;
-  try { vista = sessionStorage.getItem('aees_intro') === '1'; } catch (e) { /* sin almacenamiento */ }
-  if (vista) { intro.remove(); marcarCargado(); return; }
-
-  document.body.classList.add('sin-scroll');
-  const salir = conSonido => {
-    try { sessionStorage.setItem('aees_intro', '1'); } catch (e) { /* nada */ }
-    if (conSonido) { AeesSonido.activar(); AeesSonido.intro(); }
-    intro.classList.add('saliendo');
-    document.body.classList.remove('sin-scroll');
-    // Esperamos el "golpe" del sonido para que la entrada del hero coincida con el bajo.
-    setTimeout(marcarCargado, conSonido ? 1200 : 200);
-    setTimeout(() => intro.remove(), 1400);
-  };
-  $$('[data-intro]', intro).forEach(b => b.addEventListener('click', () => salir(b.dataset.intro === 'sonido')));
-  intro.addEventListener('keydown', e => { if (e.key === 'Escape') salir(false); });
-  $('[data-intro="sonido"]', intro).focus();
 }
 
 /* ------------------------------------------------------------------ */
@@ -329,6 +306,16 @@ function initModalEquipo() {
       d.firstChild.textContent = k; d.lastChild.textContent = v;
       return d;
     }));
+    // Crédito de la foto (las licencias CC piden autor, licencia y enlace).
+    const credito = $('#modal-credito');
+    credito.hidden = !e.imagen_fuente;
+    credito.replaceChildren();
+    if (e.imagen_fuente) {
+      const enlace = document.createElement(e.imagen_fuente_url ? 'a' : 'span');
+      enlace.textContent = e.imagen_fuente;
+      if (e.imagen_fuente_url) Object.assign(enlace, { href: e.imagen_fuente_url, target: '_blank', rel: 'noopener' });
+      credito.append(enlace);
+    }
     const botonAgregar = $('#modal-agregar');
     botonAgregar.dataset.agregar = e.id;
     botonAgregar.disabled = $(`[data-agregar="${e.id}"]`)?.disabled;
@@ -698,22 +685,39 @@ function initFormulario() {
   });
 }
 
-/* Bocina flotante + "tic" al pasar sobre botones cuando el sonido está activo */
+/* ------------------------------------------------------------------ */
+/* Sonido: botón de volumen del header + títulos que "suenan"          */
+/* La primera vez que se activa suena la intro (antes era una pantalla */
+/* aparte). Con sonido, cada letra de los títulos toca una nota.       */
+/* ------------------------------------------------------------------ */
 function initSonidoUI() {
   const btn = $('#btn-sonido');
   const pintar = () => {
+    document.body.classList.toggle('sonido-activo', AeesSonido.activo);
     if (!btn) return;
     btn.classList.toggle('activo', AeesSonido.activo);
     btn.setAttribute('aria-pressed', String(AeesSonido.activo));
-    btn.innerHTML = `<i class="fa-solid fa-volume-${AeesSonido.activo ? 'high' : 'xmark'}"></i>`;
+    btn.setAttribute('aria-label', AeesSonido.activo ? 'Silenciar el sitio' : 'Activar sonido del sitio');
   };
   btn?.addEventListener('click', () => {
-    if (AeesSonido.activo) AeesSonido.desactivar();
-    else { AeesSonido.activar(); AeesSonido.confirmar(); }
+    btn.classList.remove('invitar');
+    if (AeesSonido.activo) { AeesSonido.desactivar(); toast('info', 'Sonido desactivado'); }
+    else {
+      AeesSonido.activar();
+      AeesSonido.intro();
+      $('.hero-logo')?.classList.add('vibrando');
+      setTimeout(() => $('.hero-logo')?.classList.remove('vibrando'), 3000);
+      toast('success', 'Sonido activado: pasa el mouse por los títulos');
+    }
     pintar();
   });
   document.addEventListener('sonido-cambiado', pintar);
   pintar();
+  // Invitación discreta (el botón late 3 veces) si la persona nunca eligió.
+  let decidio = false;
+  try { decidio = localStorage.getItem('aees_sonido') !== null; } catch (e) { /* nada */ }
+  if (!decidio) btn?.classList.add('invitar');
+
   if (conMouse) {
     let ultimo = null;
     document.addEventListener('pointerover', e => {
@@ -724,9 +728,46 @@ function initSonidoUI() {
   }
 }
 
+// Parte el texto de los títulos en <span class="letra"> sin romper su HTML interno
+// (por ejemplo el <span class="texto-acento">). Cada letra salta y suena una nota.
+function initPalabrasSonoras() {
+  if (reducirMovimiento) return;
+  const partir = nodo => {
+    [...nodo.childNodes].forEach(hijo => {
+      if (hijo.nodeType === Node.TEXT_NODE && hijo.textContent.trim()) {
+        const frag = document.createDocumentFragment();
+        [...hijo.textContent].forEach(ch => {
+          if (ch === ' ') { frag.append(' '); return; }
+          const s = document.createElement('span');
+          s.className = 'letra';
+          s.textContent = ch;
+          frag.append(s);
+        });
+        hijo.replaceWith(frag);
+      } else if (hijo.nodeType === Node.ELEMENT_NODE && !hijo.matches('i, svg, .oculto-accesible')) {
+        partir(hijo);
+      }
+    });
+  };
+  $$('.seccion-titulo h2, .pagina-titulo h1').forEach(titulo => {
+    titulo.setAttribute('aria-label', titulo.textContent.trim());
+    partir(titulo);
+    $$('.letra', titulo).forEach(l => l.setAttribute('aria-hidden', 'true'));
+    $$('.letra', titulo).forEach((letra, i) => letra.addEventListener('pointerenter', () => {
+      letra.classList.remove('salta'); void letra.offsetWidth; letra.classList.add('salta');
+      AeesSonido.nota(i);
+    }));
+  });
+  // Pasar el mouse por el logo del hero "agita" las ondas.
+  const logo = $('.hero-logo');
+  logo?.addEventListener('pointerenter', () => { logo.classList.add('vibrando'); AeesSonido.nota(0, 0.12); AeesSonido.nota(4, 0.12); });
+  logo?.addEventListener('pointerleave', () => logo.classList.remove('vibrando'));
+}
+
 /* ------------------------------------------------------------------ */
 document.addEventListener('DOMContentLoaded', () => {
-  initIntro();
+  // Pequeña pausa para que se note la entrada animada del hero.
+  setTimeout(marcarCargado, 120);
   initHeader();
   const cerrarMenu = initMenuMovil();
   initScrollSuave(cerrarMenu);
@@ -749,4 +790,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initDisponibilidad();
   initFormulario();
   initSonidoUI();
+  initPalabrasSonoras();
 });

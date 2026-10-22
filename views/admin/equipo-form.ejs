@@ -56,8 +56,9 @@
 
   <h2 style="margin-top:1.6rem"><i class="fa-regular fa-image"></i> Foto y publicación</h2>
   <div class="form-rejilla">
-    <%- include('_foto', { nombre: 'imagen', valor: e.imagen, error: errores.imagen }) %>
-    <label class="campo-simple">Fuente de la foto<input name="imagen_fuente" value="<%= v('imagen_fuente') %>" maxlength="120" placeholder="Foto propia / Unsplash ..."></label>
+    <%- include('_foto', { nombre: 'imagen', valor: e.imagen, error: errores.imagen, formato: '4:3' }) %>
+    <label class="campo-simple">Crédito de la foto<input name="imagen_fuente" value="<%= v('imagen_fuente') %>" maxlength="160" placeholder="Foto propia / Autor · CC BY-SA · Wikimedia Commons"></label>
+    <label class="campo-simple">Enlace del crédito<input name="imagen_fuente_url" value="<%= v('imagen_fuente_url') %>" maxlength="400" placeholder="https://commons.wikimedia.org/wiki/File:..."><small class="ayuda">Obligatorio si la foto es de otro autor con licencia CC.</small></label>
     <div class="casillas ancho">
       <label class="casilla"><input type="checkbox" name="publicado" <%= e.publicado ? 'checked' : '' %>> Publicado en el sitio</label>
       <label class="casilla"><input type="checkbox" name="destacado" <%= e.destacado ? 'checked' : '' %>> Destacado</label>

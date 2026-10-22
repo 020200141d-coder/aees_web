@@ -1,17 +1,19 @@
 <%#
   admin/_foto.ejs — campo de imagen reutilizable: pegar URL o subir desde la PC/celular.
-  Recibe `nombre` (name del input), `valor` y `error`. La subida la hace public/js/admin.js:
-  reduce la foto a máx. 1600 px en el navegador y la envía a POST /admin/fotos.
+  Recibe `nombre` (name del input), `valor`, `error` y `formato` (proporción donde se mostrará:
+  '4:3' equipos, '16:10' combos, '16:9' portada, '4:5' tarjetas verticales, '1:1' QR, 'libre' galería).
+  public/js/admin.js abre un recortador con esa proporción, reduce la foto a máx. 1600 px,
+  la convierte a WebP y la envía a POST /admin/fotos. Así ninguna foto deforma las tarjetas del sitio.
 %>
 <div class="campo-simple ancho<%= error ? ' error' : '' %>">
   <span>Foto</span>
-  <div class="subir-foto" data-subir-foto>
+  <div class="subir-foto" data-subir-foto data-formato="<%= typeof formato !== 'undefined' ? formato : '4:3' %>">
     <div class="vista<%= valor ? ' con-foto' : '' %>" style="<%= valor ? `background-image:url('${valor}')` : '' %>"><i class="fa-regular fa-image"></i></div>
     <div style="display:grid;gap:.5rem">
       <input name="<%= nombre %>" value="<%= valor || '' %>" placeholder="https://... o sube una foto" data-url-foto>
       <div class="acciones">
         <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i class="fa-solid fa-upload"></i> Subir foto<input type="file" accept="image/jpeg,image/png,image/webp" hidden data-archivo-foto></label>
-        <small class="ayuda">Se reduce automáticamente a 1600 px antes de subir.</small>
+        <small class="ayuda">Podrás encuadrarla; se guarda en WebP (proporción <%= typeof formato !== 'undefined' ? formato : '4:3' %>).</small>
       </div>
     </div>
   </div>

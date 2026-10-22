@@ -34,7 +34,7 @@
   <div class="form-rejilla">
     <label class="campo-simple">Número Yape<input name="yape_numero" value="<%= n.yape?.numero %>" maxlength="9"></label>
     <label class="campo-simple">Titular<input name="yape_titular" value="<%= n.yape?.titular %>"></label>
-    <%- include('_foto', { nombre: 'yape_qr', valor: n.yape?.qr_url, error: null }) %>
+    <%- include('_foto', { nombre: 'yape_qr', valor: n.yape?.qr_url, error: null, formato: '1:1' }) %>
   </div>
   <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar datos del negocio</button></div>
 </form>
@@ -79,7 +79,7 @@
   <h2><i class="fa-regular fa-images"></i> Fotos de portada</h2>
   <div class="form-rejilla">
     <% [['hero', 'Fondo principal (hero)'], ['boda', 'Tarjeta Bodas'], ['electronica', 'Tarjeta Fiesta electrónica'], ['corporativo', 'Tarjeta Corporativo']].forEach(([k, t]) => { %>
-      <div class="ancho"><b style="font-size:.85rem"><%= t %></b><%- include('_foto', { nombre: k, valor: portada[k], error: null }) %></div>
+      <div class="ancho"><b style="font-size:.85rem"><%= t %></b><%- include('_foto', { nombre: k, valor: portada[k], error: null, formato: k === 'hero' ? '16:9' : '4:5' }) %></div>
     <% }) %>
     <label class="campo-simple ancho">Créditos de fotos (pie de página)<input name="fuentes" value="<%= portada.fuentes %>" maxlength="200"></label>
   </div>

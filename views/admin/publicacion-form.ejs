@@ -8,7 +8,7 @@
 <form method="post" action="<%= nuevo ? '/admin/galeria' : `/admin/galeria/${p.id}` %>" class="tarjeta" novalidate>
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <div class="form-rejilla">
-    <%- include('_foto', { nombre: 'imagen', valor: p.imagen, error: errores.imagen }) %>
+    <%- include('_foto', { nombre: 'imagen', valor: p.imagen, error: errores.imagen, formato: 'libre' }) %>
     <label class="campo-simple<%= errores.titulo ? ' error' : '' %>">Título<input name="titulo" value="<%= p.titulo || '' %>" maxlength="100" required placeholder="Boda en Urubamba con line array"><%- err('titulo') %></label>
     <label class="campo-simple">Tipo de evento
       <select name="tipo"><% Object.entries(TIPOS_PUB).forEach(([id, t]) => { %><option value="<%= id %>" <%= p.tipo === id ? 'selected' : '' %>><%= t %></option><% }) %></select>

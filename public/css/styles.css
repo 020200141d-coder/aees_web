@@ -115,6 +115,41 @@ ul { list-style: none; }
 .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
+/* Logo (SVG en línea): las ondas vibran siempre y van más rápido con el sonido activo. */
+.logo-svg { display: block; height: auto; overflow: visible; }
+.logo-header { width: 112px; }
+.logo-footer .logo-svg { width: 190px; }
+.logo-ondas .onda { transform-box: fill-box; transform-origin: center; animation: vibrar 2.6s ease-in-out infinite; }
+.logo-ondas .onda-2 { animation-delay: -1.3s; }
+@keyframes vibrar { 50% { transform: scaleY(0.55); } }
+body.sonido-activo .logo-ondas .onda { animation-duration: 0.8s; }
+.logo:hover .logo-ondas .onda { animation-duration: 0.6s; }
+.logo-letras { transition: filter 0.4s; }
+.logo:hover .logo-letras, .hero-logo:hover .logo-letras { filter: drop-shadow(0 0 14px rgba(var(--primario-rgb), 0.55)); }
+/* En el hero las ondas se "dibujan" al entrar (pathLength=1 → el trazo va de 0 a 1). */
+.logo-hero { width: min(520px, 86vw); margin: 0.4rem 0 0.2rem -1.2%; }
+.logo-hero .onda { stroke-dasharray: 1; stroke-dashoffset: 1; animation: dibujar-onda 1.8s var(--ease) 0.3s forwards, vibrar 2.6s ease-in-out 2.1s infinite; }
+.logo-hero .onda-2 { animation-delay: 0.5s, 2.3s; }
+@keyframes dibujar-onda { to { stroke-dashoffset: 0; } }
+.hero-logo.vibrando .logo-ondas .onda { animation-duration: 1.8s, 0.35s; }
+
+/* Botón de volumen: arcos animados cuando suena, cruz cuando está en silencio. */
+.btn-volumen svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.btn-volumen .parlante { fill: currentColor; stroke: none; }
+.btn-volumen .arco { opacity: 0; }
+.btn-volumen.activo { color: var(--primario); border-color: var(--primario); }
+.btn-volumen.activo .silencio { opacity: 0; }
+.btn-volumen.activo .arco { opacity: 1; animation: arco 1.2s ease-in-out infinite; }
+.btn-volumen.activo .arco-2 { animation-delay: 0.25s; }
+@keyframes arco { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+.btn-volumen.invitar { animation: invitar 2.4s ease-in-out 3; }
+@keyframes invitar { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primario-rgb), 0.6); } 50% { box-shadow: 0 0 0 10px rgba(var(--primario-rgb), 0); } }
+
+/* Letras que "suenan": main.js parte los títulos en letras; al pasar el mouse saltan como una onda. */
+.letra { display: inline-block; transition: color 0.3s; }
+.letra.salta { animation: letra-salta 0.6s var(--ease-rebote); color: var(--primario); }
+@keyframes letra-salta { 30% { transform: translateY(-0.28em) scale(1.12); } 60% { transform: translateY(0.06em); } }
+
 /* Botones */
 .btn { position: relative; overflow: hidden; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.95rem 1.6rem; border-radius: 12px; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.01em; cursor: pointer; transition: transform 0.3s var(--ease), box-shadow 0.3s, background-color 0.3s, color 0.3s, border-color 0.3s, translate 0.35s var(--ease); }
 .btn i { transition: transform 0.3s var(--ease); }
@@ -139,22 +174,8 @@ ul { list-style: none; }
 .btn.cargando .btn-cargando { display: inline-flex; gap: 0.6rem; align-items: center; }
 
 /* ---------- 4. Intro con sonido + hero ---------- */
-/* Puerta de entrada: el navegador no permite audio automático, así que el
-   sonido arranca recién cuando la persona hace clic en "Entrar con sonido". */
-.intro { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; text-align: center; padding: 24px 16px; background: radial-gradient(ellipse at 50% 40%, #13304f, var(--bg) 70%); transition: opacity 0.9s var(--ease), visibility 0.9s; }
-.intro.saliendo { opacity: 0; visibility: hidden; }
-.intro.saliendo .intro-logo { transform: scale(1.6); filter: blur(6px); }
-.intro-logo { display: grid; justify-items: center; gap: 1.2rem; transition: transform 1s var(--ease), filter 1s; }
-.intro-ondas { position: relative; width: 150px; height: 150px; display: grid; place-items: center; }
-.intro-ondas span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(var(--primario-rgb), 0.5); animation: onda 2.4s var(--ease) infinite; }
-.intro-ondas span:nth-child(2) { animation-delay: 0.8s; }
-.intro-ondas span:nth-child(3) { animation-delay: 1.6s; }
-@keyframes onda { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
 .intro-eq { display: flex; align-items: flex-end; gap: 5px; height: 56px; }
 .intro-eq i { width: 7px; height: 100%; border-radius: 3px; background: linear-gradient(to top, var(--primario), var(--secundario)); animation: eq calc(0.6s + var(--i) * 0.08s) ease-in-out calc(var(--i) * -0.15s) infinite; transform-origin: bottom; }
-.intro h1 { font-size: clamp(2.4rem, 8vw, 4.2rem); letter-spacing: -0.04em; }
-.intro p { color: var(--texto-suave); max-width: 440px; }
-.intro-acciones { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; margin-top: 0.6rem; }
 
 .hero { position: relative; min-height: 100svh; display: flex; align-items: center; padding: calc(var(--header-h) + 40px) 0 110px; overflow: hidden; isolation: isolate; }
 .hero-foto { position: absolute; inset: -6%; z-index: -3; background-size: cover; background-position: center; filter: saturate(1.1) brightness(0.45); transform: scale(1.05); animation: respirar-foto 18s ease-in-out infinite alternate; }
@@ -344,6 +365,8 @@ body.cargado .hero-contenido > .hero-anim:nth-child(5) { animation-delay: 0.48s;
 .ficha div { padding: 0.7rem 0.9rem; border-radius: 12px; background: var(--tarjeta); border: 1px solid var(--borde); }
 .ficha small { display: block; font-family: var(--f-mono); font-size: 0.68rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.08em; }
 .ficha b { font-weight: 600; font-size: 0.95rem; }
+.credito-foto { font-size: 0.75rem; color: var(--texto-suave); margin: -0.6rem 0 1rem; }
+.credito-foto a { text-decoration: underline; text-underline-offset: 2px; }
 .modal-nav { display: flex; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; padding-top: 1.2rem; border-top: 1px solid var(--borde); }
 .modal-foto { width: min(1100px, calc(100% - 32px)); }
 .modal-foto .modal-contenido { background: #000; }
@@ -371,7 +394,7 @@ body.cargado .hero-contenido > .hero-anim:nth-child(5) { animation-delay: 0.48s;
 
 .galeria { columns: 3 300px; column-gap: 1.1rem; }
 .foto-card { position: relative; break-inside: avoid; margin-bottom: 1.1rem; border-radius: 18px; overflow: hidden; border: 1px solid var(--borde); cursor: zoom-in; display: block; width: 100%; text-align: left; }
-.foto-card img { width: 100%; height: auto; transition: transform 1s var(--ease), filter 0.5s; filter: saturate(0.9); }
+.foto-card img { width: 100%; height: auto; max-height: 560px; object-fit: cover; transition: transform 1s var(--ease), filter 0.5s; filter: saturate(0.9); }
 .foto-card:hover img { transform: scale(1.06); filter: saturate(1.15); }
 .foto-card figcaption { position: absolute; inset: auto 0 0; padding: 1.4rem 1.1rem 1rem; background: linear-gradient(180deg, transparent, rgba(11, 25, 41, 0.95)); transform: translateY(35%); opacity: 0; transition: transform 0.5s var(--ease), opacity 0.4s; }
 .foto-card:hover figcaption, .foto-card:focus-visible figcaption { transform: none; opacity: 1; }
@@ -564,8 +587,6 @@ input[type="range"] { width: 100%; accent-color: var(--primario); }
 .wa-flotante { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6rem; background: #25d366; color: #062b14; box-shadow: 0 14px 30px -10px rgba(37, 211, 102, 0.8); animation: wa-pulso 2.6s infinite; transition: transform 0.3s var(--ease-rebote); }
 .wa-flotante:hover { transform: scale(1.1) rotate(-8deg); }
 @keyframes wa-pulso { 70% { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); } 0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); } }
-.btn-sonido { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--superficie); border: 1px solid var(--borde-fuerte); color: var(--texto-suave); transition: color 0.3s, border-color 0.3s; }
-.btn-sonido.activo { color: var(--primario); border-color: var(--primario); }
 .volver-arriba { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; position: relative; background: var(--superficie); border: 1px solid var(--borde); color: var(--primario); opacity: 0; transform: translateY(20px) scale(0.8); pointer-events: none; transition: opacity 0.35s, transform 0.4s var(--ease-rebote); }
 .volver-arriba.visible { opacity: 1; transform: none; pointer-events: auto; }
 .volver-arriba svg { position: absolute; inset: 0; transform: rotate(-90deg); }

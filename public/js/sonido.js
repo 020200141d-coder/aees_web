@@ -7,10 +7,10 @@
 //     filtros y envolventes de volumen (gain), igual que en una consola.
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
-//  eso todo empieza con el clic en "Entrar con sonido" o en el botón de la
-//  bocina. La preferencia se recuerda en localStorage.
+//  eso todo empieza con el clic en el botón de volumen del header (la primera
+//  vez suena la intro). La preferencia se recuerda en localStorage.
 //
-//  API global: AeesSonido.activo, activar(), desactivar(), intro(), tick(), confirmar()
+//  API global: AeesSonido.activo, activar(), desactivar(), intro(), tick(), confirmar(), nota(i)
 // ============================================================================
 
 (function () {
@@ -138,6 +138,20 @@
     bombo(c, c.currentTime, 0.25);
   }
 
+  // Nota de una escala pentatónica (suena bien en cualquier orden): la i-ésima letra de un título.
+  const ESCALA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
+  function nota(i = 0, vol = 0.07) {
+    if (!activo) return;
+    const c = contexto();
+    if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.type = 'triangle';
+    o.frequency.value = ESCALA[i % ESCALA.length];
+    envolvente(g, t, vol, 0.35, 0.005);
+    o.connect(g).connect(maestro);
+    o.start(t); o.stop(t + 0.4);
+  }
+
   function guardar() {
     try { localStorage.setItem('aees_sonido', activo ? '1' : '0'); } catch (e) { /* sin almacenamiento */ }
     document.dispatchEvent(new CustomEvent('sonido-cambiado', { detail: activo }));
@@ -147,6 +161,6 @@
     get activo() { return activo; },
     activar() { activo = true; contexto(); guardar(); },
     desactivar() { activo = false; guardar(); },
-    intro, tick, confirmar
+    intro, tick, confirmar, nota
   };
 })();

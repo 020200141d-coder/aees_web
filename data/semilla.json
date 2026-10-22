@@ -98,12 +98,13 @@
       "volumen_l": 160,
       "peso_kg": 35,
       "largo_cm": 80,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/xrs212.webp",
+      "imagen_fuente": "Foto referencial: PM - PhilyG talk · Public domain · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 0
+      "orden": 0,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Line_Array_and_Subs.jpg"
     },
     {
       "id": "la151",
@@ -127,12 +128,13 @@
       "volumen_l": 150,
       "peso_kg": 30,
       "largo_cm": 75,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/la151.webp",
+      "imagen_fuente": "Foto referencial: Kurt Snieckus · CC BY-SA 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 1
+      "orden": 1,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:EAW_KF850s_%2B_SB1000s_(Blacklight_Party).jpg"
     },
     {
       "id": "eon615",
@@ -156,12 +158,13 @@
       "volumen_l": 112,
       "peso_kg": 18,
       "largo_cm": 71,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/eon615.webp",
+      "imagen_fuente": "Foto referencial: Blurred Ren · CC BY 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 2
+      "orden": 2,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:JBL_EON_1500.jpg"
     },
     {
       "id": "zlx15p",
@@ -190,7 +193,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 3
+      "orden": 3,
+      "imagen_fuente_url": ""
     },
     {
       "id": "srx818sp",
@@ -219,7 +223,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 4
+      "orden": 4,
+      "imagen_fuente_url": ""
     },
     {
       "id": "srx828sp",
@@ -248,7 +253,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 5
+      "orden": 5,
+      "imagen_fuente_url": ""
     },
     {
       "id": "rcf-pasivo",
@@ -277,7 +283,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 6
+      "orden": 6,
+      "imagen_fuente_url": ""
     },
     {
       "id": "crest-4000",
@@ -301,12 +308,13 @@
       "volumen_l": 35,
       "peso_kg": 18,
       "largo_cm": 50,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/crest-4000.webp",
+      "imagen_fuente": "Foto referencial: Niels Heidenreich · CC BY-SA 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 7
+      "orden": 7,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Professional_PA_power_amps_from_Crest_Audio_and_QSC_with_control_modules_in_rack_(cropped).jpg"
     },
     {
       "id": "ui24r",
@@ -330,12 +338,13 @@
       "volumen_l": 40,
       "peso_kg": 8,
       "largo_cm": 50,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/ui24r.webp",
+      "imagen_fuente": "Foto referencial: Duncan Underwood · CC BY 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 8
+      "orden": 8,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Soundcraft_Si2,_Thirsty_Merc_FOH.jpg"
     },
     {
       "id": "ui16",
@@ -364,7 +373,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 9
+      "orden": 9,
+      "imagen_fuente_url": ""
     },
     {
       "id": "behringer-24",
@@ -388,12 +398,13 @@
       "volumen_l": 60,
       "peso_kg": 12,
       "largo_cm": 75,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/behringer-24.webp",
+      "imagen_fuente": "Foto referencial: deepsonic from Switzerland · CC BY-SA 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 10
+      "orden": 10,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Behringer_Xenyx_X1204USB_(25765133528).jpg"
     },
     {
       "id": "soundcraft-8",
@@ -417,12 +428,13 @@
       "volumen_l": 15,
       "peso_kg": 4,
       "largo_cm": 40,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/soundcraft-8.webp",
+      "imagen_fuente": "Foto referencial: Kazuhisa OTSUBO from Tokyo, Japan · CC BY 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 11
+      "orden": 11,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Soundcraft_Signature_12_MTK_analog_mixer_with_14in_12out_audio_interface_-_2016_Gakki_Fair_(2016-11-04_by_Kazuhisa_OTSUBO).jpg"
     },
     {
       "id": "sm58",
@@ -446,12 +458,13 @@
       "volumen_l": 2,
       "peso_kg": 0.5,
       "largo_cm": 20,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/sm58.webp",
+      "imagen_fuente": "Foto referencial: ChrisHH · CC BY-SA 3.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 12
+      "orden": 12,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Shure_sm58.jpg"
     },
     {
       "id": "beta58",
@@ -475,12 +488,13 @@
       "volumen_l": 2,
       "peso_kg": 0.5,
       "largo_cm": 20,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/beta58.webp",
+      "imagen_fuente": "Foto referencial: Geheimnisträgerin · CC BY-SA 3.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 13
+      "orden": 13,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:ShureBeta58A.jpg"
     },
     {
       "id": "sv100",
@@ -509,7 +523,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 14
+      "orden": 14,
+      "imagen_fuente_url": ""
     },
     {
       "id": "e832",
@@ -538,7 +553,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 15
+      "orden": 15,
+      "imagen_fuente_url": ""
     },
     {
       "id": "e935",
@@ -567,7 +583,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 16
+      "orden": 16,
+      "imagen_fuente_url": ""
     },
     {
       "id": "e945",
@@ -596,7 +613,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 17
+      "orden": 17,
+      "imagen_fuente_url": ""
     },
     {
       "id": "shure-inal",
@@ -620,12 +638,13 @@
       "volumen_l": 8,
       "peso_kg": 2.5,
       "largo_cm": 35,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/shure-inal.webp",
+      "imagen_fuente": "Foto referencial: Christian Dahlqvist · CC BY-SA 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 18
+      "orden": 18,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Shure_PG58_with_PG2_wireless_microphone_-_on.jpg"
     },
     {
       "id": "beam290",
@@ -649,12 +668,13 @@
       "volumen_l": 50,
       "peso_kg": 15,
       "largo_cm": 50,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/beam290.webp",
+      "imagen_fuente": "Foto referencial: Scoreed · CC BY 2.5 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 19
+      "orden": 19,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:MovingYoke.JPG"
     },
     {
       "id": "tacho-54",
@@ -683,7 +703,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 20
+      "orden": 20,
+      "imagen_fuente_url": ""
     },
     {
       "id": "matrix",
@@ -712,7 +733,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 21
+      "orden": 21,
+      "imagen_fuente_url": ""
     },
     {
       "id": "minibrut",
@@ -741,7 +763,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 22
+      "orden": 22,
+      "imagen_fuente_url": ""
     },
     {
       "id": "humo",
@@ -765,12 +788,13 @@
       "volumen_l": 20,
       "peso_kg": 6,
       "largo_cm": 40,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/humo.webp",
+      "imagen_fuente": "Foto referencial: Autor desconocido · CC BY-SA 2.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 23
+      "orden": 23,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:Smoke_Machine.jpg"
     },
     {
       "id": "dmx",
@@ -794,12 +818,13 @@
       "volumen_l": 8,
       "peso_kg": 2.5,
       "largo_cm": 48,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/dmx.webp",
+      "imagen_fuente": "Foto referencial: © JD (de.wikipedia.org) · CC BY-SA 4.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 24
+      "orden": 24,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:DMX-Controller_Stairville_DMX_Master_I_-_JD.jpg"
     },
     {
       "id": "led-p39",
@@ -823,12 +848,13 @@
       "volumen_l": 45,
       "peso_kg": 15,
       "largo_cm": 100,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/led-p39.webp",
+      "imagen_fuente": "Foto referencial: LEDEXPERT · CC BY-SA 4.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": true,
-      "orden": 25
+      "orden": 25,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:FHD_LED_Videowall.png"
     },
     {
       "id": "kit-cables",
@@ -852,12 +878,13 @@
       "volumen_l": 40,
       "peso_kg": 12,
       "largo_cm": 50,
-      "imagen": "",
-      "imagen_fuente": "",
+      "imagen": "/img/equipos/kit-cables.webp",
+      "imagen_fuente": "Foto referencial: Autor desconocido · CC BY-SA 3.0 · Wikimedia Commons",
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 26
+      "orden": 26,
+      "imagen_fuente_url": "https://commons.wikimedia.org/wiki/File:XLR_cable_connectors.jpg"
     },
     {
       "id": "tripode",
@@ -886,7 +913,8 @@
       "estado": "operativo",
       "publicado": true,
       "destacado": false,
-      "orden": 27
+      "orden": 27,
+      "imagen_fuente_url": ""
     }
   ],
   "combos": [

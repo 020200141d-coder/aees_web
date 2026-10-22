@@ -38,13 +38,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body class="admin">
 <div class="admin-layout">
   <nav class="lateral" aria-label="Panel">
-    <a href="/admin" class="logo" style="background:none;box-shadow:none"><span class="logo-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>AeeS<b>.</b>Panel<small><%= esAdmin ? 'Administrador' : 'Publicador' %></small></span></a>
+    <a href="/admin" class="logo" style="background:none;box-shadow:none"><%- include('../partials/logo', { clase: 'logo-header' }) %><span>Panel<small><%= esAdmin ? 'Administrador' : 'Publicador' %></small></span></a>
     <% enlaces.forEach(([grupo, items]) => { const visibles = items.filter(i => i[4]); if (!visibles.length) return; %>
       <span class="lateral-grupo"><%= grupo %></span>
       <% visibles.forEach(([id, href, icono, texto, , insignia]) => { %>

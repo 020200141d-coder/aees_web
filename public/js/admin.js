@@ -5,7 +5,7 @@
 //   • [data-confirmar]  formularios que piden "¿Seguro?" antes de enviarse
 //   • [data-alternar]   interruptor publicado sí/no → POST por fetch (sin recargar)
 //   • form[data-auto]   el <select> de estado se guarda solo al cambiar
-//   • [data-subir-foto] reduce la foto a 1600 px en el navegador y la sube
+//   • [data-subir-foto] encuadra la foto (Cropper.js), la pasa a WebP y la sube
 //   • #form-combo       filas dinámicas de equipos/adicionales + vista previa en vivo
 //   • #archivo-respaldo lee el .json y lo envía a /admin/respaldo/restaurar
 // ============================================================================
@@ -48,45 +48,92 @@
 
   $$('form[data-auto] select').forEach(s => s.addEventListener('change', () => s.form.submit()));
 
-  // ── Subir foto: reducir en el navegador con <canvas> y enviar ─────────────
-  // Una foto de celular pesa 4–6 MB; reducida a 1600 px queda en ~250 KB.
-  function reducir(archivo, max = 1600) {
-    return new Promise((ok, mal) => {
-      const img = new Image();
-      img.onload = () => {
-        const escala = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * escala);
-        c.height = Math.round(img.height * escala);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        URL.revokeObjectURL(img.src);
-        ok(c.toDataURL('image/jpeg', 0.82));
-      };
-      img.onerror = () => mal(new Error('No se pudo leer la imagen.'));
-      img.src = URL.createObjectURL(archivo);
-    });
+  // ── Subir foto: encuadrar, reducir y convertir a WebP en el navegador ────
+  // 1. Cropper.js muestra la foto con un marco de la proporción donde se usará
+  //    (data-formato), así una foto vertical no deforma una tarjeta horizontal.
+  // 2. Se exporta a máx. 1600 px por lado en WebP (~150–300 KB; si el navegador
+  //    no sabe hacer WebP, en JPEG).
+  // 3. Se envía en base64 a POST /admin/fotos, que la guarda y devuelve la URL.
+  const PROPORCION = { '4:3': 4 / 3, '3:4': 3 / 4, '16:9': 16 / 9, '16:10': 16 / 10, '4:5': 4 / 5, '1:1': 1 };
+
+  function exportar(canvas) {
+    const webp = canvas.toDataURL('image/webp', 0.82);
+    return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85);
+  }
+
+  // Sin Cropper (CDN caído): recorte centrado automático con la proporción pedida.
+  function recorteCentrado(img, proporcion) {
+    let w = img.naturalWidth, h = img.naturalHeight, x = 0, y = 0;
+    if (proporcion) {
+      if (w / h > proporcion) { const nw = h * proporcion; x = (w - nw) / 2; w = nw; } else { const nh = w / proporcion; y = (h - nh) / 2; h = nh; }
+    }
+    const escala = Math.min(1, 1600 / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * escala);
+    c.height = Math.round(h * escala);
+    c.getContext('2d').drawImage(img, x, y, w, h, 0, 0, c.width, c.height);
+    return exportar(c);
+  }
+
+  async function encuadrar(archivo, formato) {
+    const url = URL.createObjectURL(archivo);
+    try {
+      const img = await new Promise((ok, mal) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => mal(new Error('No se pudo leer la imagen.'));
+        i.src = url;
+      });
+      if (!window.Cropper || !hayAlertas) return recorteCentrado(img, PROPORCION[formato]);
+      let cropper;
+      // En la galería se puede elegir la orientación; en lo demás la proporción es fija.
+      const opciones = formato === 'libre'
+        ? `<div class="acciones" style="justify-content:center;margin-top:.8rem">${[['4:3', 'Horizontal'], ['3:4', 'Vertical'], ['16:9', 'Panorámica'], ['libre', 'Libre']].map(([f, t]) => `<button type="button" class="btn btn-ghost btn-sm" data-prop="${f}">${t}</button>`).join('')}</div>`
+        : '';
+      const r = await Swal.fire({
+        title: 'Encuadra la foto',
+        html: `<div style="max-height:60vh"><img id="img-recorte" src="${url}" alt="" style="max-width:100%;display:block"></div>${opciones}<p style="font-size:.8rem;margin-top:.6rem">Arrastra para mover el marco y usa la rueda para acercar.</p>`,
+        width: 760,
+        showCancelButton: true,
+        confirmButtonText: 'Usar esta foto',
+        cancelButtonText: 'Cancelar',
+        didOpen: el => {
+          cropper = new Cropper(el.querySelector('#img-recorte'), { aspectRatio: PROPORCION[formato] || (formato === 'libre' ? 4 / 3 : NaN), viewMode: 1, autoCropArea: 1, background: false });
+          el.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => cropper.setAspectRatio(PROPORCION[b.dataset.prop] || NaN)));
+        },
+        preConfirm: () => exportar(cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingQuality: 'high' }))
+      });
+      cropper?.destroy();
+      return r.isConfirmed ? r.value : null;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
 
   $$('[data-subir-foto]').forEach(caja => {
     const url = $('[data-url-foto]', caja), vista = $('.vista', caja), archivo = $('[data-archivo-foto]', caja);
+    const formato = caja.dataset.formato || '4:3';
+    // La miniatura usa la misma proporción que tendrá la foto en el sitio.
+    if (PROPORCION[formato]) vista.style.aspectRatio = String(PROPORCION[formato]);
     const pintar = v => { vista.style.backgroundImage = v ? `url("${v}")` : ''; vista.classList.toggle('con-foto', Boolean(v)); url.dispatchEvent(new Event('input', { bubbles: true })); };
     url.addEventListener('change', () => pintar(url.value.trim()));
     archivo.addEventListener('change', async () => {
       const f = archivo.files[0];
+      archivo.value = '';
       if (!f) return;
-      vista.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-      vista.classList.remove('con-foto');
       try {
-        const datos = await reducir(f);
+        const datos = await encuadrar(f, formato);
+        if (!datos) return;
+        vista.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        vista.classList.remove('con-foto');
         const r = await postJSON('/admin/fotos', { datos });
         url.value = r.url;
         pintar(r.url);
-        toast('success', 'Foto subida');
+        toast('success', `Foto lista (${Math.round(datos.length * 0.75 / 1024)} KB)`);
       } catch (err) {
         toast('error', err.message);
       } finally {
         vista.innerHTML = '<i class="fa-regular fa-image"></i>';
-        archivo.value = '';
       }
     });
   });
