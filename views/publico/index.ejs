@@ -1,0 +1,421 @@
+<%#
+  publico/index.ejs — portada de AeeS Acústico.
+  Datos que llegan de src/rutas/publico.js: equipos, combos, publicaciones, servicios, mapa (id → equipo).
+  Los atributos data-* son los "ganchos" de public/js/main.js (reveal, filtros, modal, carrusel...).
+  Nada de este contenido está fijo en el HTML: todo se edita desde el panel /admin.
+%>
+<%
+  const { soles, CATEGORIAS, TIPOS_EVENTO } = util;
+  const anios = anio - (negocio.anio_fundacion || 2019);
+  const unidades = equipos.reduce((s, e) => s + e.cantidad_total, 0);
+  const combosOrden = [...combos].sort((a, b) => (b.destacado - a.destacado) || a.orden - b.orden);
+  const TIPOS_PUB = { boda: 'Bodas', fiesta: 'Fiestas', concierto: 'Conciertos', corporativo: 'Corporativo', conferencia: 'Ceremonias', electronica: 'Electrónica' };
+  const tiposGaleria = [...new Set(publicaciones.map(p => p.tipo))];
+  const marcas = [...new Set(equipos.map(e => e.marca).filter(m => m && !['Genérica', 'AeeS'].includes(m)))];
+%>
+<%- include('../partials/head') %>
+<body class="portada">
+
+<%# Intro: aparece una vez por sesión. Sin JavaScript se oculta (noscript). %>
+<div class="intro" id="intro" role="dialog" aria-modal="true" aria-labelledby="intro-titulo">
+  <div class="intro-logo">
+    <div class="intro-ondas" aria-hidden="true"><span></span><span></span><span></span>
+      <div class="intro-eq"><% for (let i = 0; i < 9; i++) { %><i style="--i:<%= i %>"></i><% } %></div>
+    </div>
+    <h1 id="intro-titulo">AeeS<span class="texto-acento">.</span>Acústico</h1>
+    <p>Sonido, luces y pantallas para eventos en Cusco y el Valle Sagrado.</p>
+    <div class="intro-acciones">
+      <button class="btn btn-primario magnetico" data-intro="sonido"><i class="fa-solid fa-volume-high"></i> Entrar con sonido</button>
+      <button class="btn btn-ghost" data-intro="silencio">Entrar sin sonido</button>
+    </div>
+  </div>
+</div>
+<noscript><style>.intro{display:none}.hero-anim,[data-reveal]{opacity:1!important;translate:none!important}</style></noscript>
+
+<%- include('../partials/header') %>
+
+<main>
+  <!-- ================= HERO ================= -->
+  <section id="inicio" class="hero">
+    <div class="hero-foto" style="background-image:url('<%= portada.hero %>')" aria-hidden="true"></div>
+    <div class="haces" aria-hidden="true"><span class="haz haz-1"></span><span class="haz haz-2"></span><span class="haz haz-3"></span></div>
+    <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
+
+    <div class="contenedor">
+      <div class="hero-contenido">
+        <span class="etiqueta hero-anim"><span class="punto-vivo"></span> Reservas abiertas · Cusco y Valle Sagrado</span>
+        <h1 class="hero-anim">
+          <span class="h1-sub">Rental de equipos audiovisuales</span>
+          AeeS <span class="texto-acento">Acústico</span>
+        </h1>
+        <p class="hero-rol hero-anim" aria-label="Bodas, fiestas electrónicas, conciertos, eventos corporativos">
+          <span class="prompt">&gt;_</span>
+          <span id="typed" data-roles='<%= JSON.stringify(["Bodas con orquesta", "Fiestas electrónicas de 8 horas", "Conciertos al aire libre", "Conferencias con voz clara", "Line array EAW + JBL SRX"]) %>'></span><span class="caret"></span>
+        </p>
+        <p class="hero-desc hero-anim"><%= negocio.descripcion %> Arma tu evento, mira la disponibilidad por fecha y sepáralo con el <b>adelanto</b>.</p>
+        <div class="hero-acciones hero-anim">
+          <a href="#equipos" class="btn btn-primario magnetico" data-scroll>Ver equipos <i class="fa-solid fa-arrow-down"></i></a>
+          <a href="/asistente" class="btn btn-coral magnetico"><i class="fa-solid fa-wand-magic-sparkles"></i> Cotizar mi evento</a>
+          <a href="#contacto" class="btn btn-ghost magnetico" data-scroll><i class="fa-regular fa-paper-plane"></i> Cotizar</a>
+        </div>
+      </div>
+    </div>
+
+    <a href="#marcas" class="scroll-indicador" data-scroll aria-label="Bajar"><span class="mouse"><span></span></span><small>Scroll</small></a>
+  </section>
+
+  <!-- ================= MARCAS ================= -->
+  <section id="marcas" class="marcas" aria-label="Marcas con las que trabajamos">
+    <div class="marcas-pista">
+      <% for (let vuelta = 0; vuelta < 2; vuelta++) { marcas.forEach(m => { %><span <%= vuelta ? 'aria-hidden="true"' : '' %>><%= m %></span><% }) } %>
+    </div>
+  </section>
+
+  <!-- ================= STATS ================= -->
+  <section class="stats">
+    <div class="contenedor stats-grid" data-stagger>
+      <div class="stat" data-reveal><strong data-contador="<%= anios %>" data-prefijo="+">0</strong><span>Años en eventos</span></div>
+      <div class="stat" data-reveal><strong data-contador="<%= unidades %>">0</strong><span>Equipos propios en stock</span></div>
+      <div class="stat" data-reveal><strong data-contador="<%= combos.length %>">0</strong><span>Combos listos para reservar</span></div>
+      <div class="stat" data-reveal><strong data-contador="<%= publicaciones.length %>">0</strong><span>Eventos en la galería</span></div>
+    </div>
+  </section>
+
+  <!-- ================= DOS CAMINOS ================= -->
+  <section class="seccion">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">01</span>
+        <h2>¿Cómo quieres armar tu evento?</h2>
+        <p>Sepas mucho de sonido o nada, llegas al mismo resultado: el equipo justo y un precio claro.</p>
+      </header>
+      <div class="caminos" data-stagger>
+        <a href="/asistente" class="camino camino-coral tilt" data-reveal>
+          <i class="fa-solid fa-wand-magic-sparkles grande"></i>
+          <h3>Ayúdame a elegir</h3>
+          <p>Cuéntanos qué celebras, cuántos invitados y dónde. Nuestro asistente con IA te propone tres opciones con precio, transporte y clima del día.</p>
+          <span class="btn btn-coral btn-sm">Empezar encuesta <i class="fa-solid fa-arrow-right"></i></span>
+          <div class="brillo" aria-hidden="true"></div>
+        </a>
+        <a href="#equipos" class="camino tilt" data-scroll data-reveal>
+          <i class="fa-solid fa-sliders grande"></i>
+          <h3>Sé lo que necesito</h3>
+          <p>Filtra el catálogo por categoría, revisa marca, modelo y ficha técnica, mira la disponibilidad de tu fecha y arma tu lista equipo por equipo.</p>
+          <span class="btn btn-ghost btn-sm">Ir al catálogo <i class="fa-solid fa-arrow-down"></i></span>
+          <div class="brillo" aria-hidden="true"></div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SERVICIOS (carrusel) ================= -->
+  <section id="servicios" class="seccion seccion-alt">
+    <div class="contenedor">
+      <header class="seccion-titulo seccion-titulo-flex" data-reveal>
+        <div>
+          <span class="seccion-num">02</span>
+          <h2>Servicios</h2>
+          <p>Todo lo que un evento necesita para verse y escucharse bien.</p>
+        </div>
+        <div class="carrusel-controles">
+          <button class="btn-icono" data-carrusel-prev aria-label="Anterior"><i class="fa-solid fa-arrow-left"></i></button>
+          <button class="btn-icono" data-carrusel-next aria-label="Siguiente"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </header>
+      <div class="carrusel" id="carrusel" data-reveal>
+        <div class="carrusel-pista">
+          <% servicios.forEach((s, i) => { %>
+            <article class="servicio-card tilt">
+              <span class="servicio-num"><%= String(i + 1).padStart(2, '0') %></span>
+              <span class="servicio-icono"><i class="<%= s.icono %>"></i></span>
+              <h3><%= s.titulo %></h3>
+              <p><%= s.descripcion %></p>
+              <a href="#contacto" class="servicio-link" data-scroll data-servicio="<%= s.titulo %>">Cotizar <i class="fa-solid fa-arrow-right"></i></a>
+              <div class="brillo" aria-hidden="true"></div>
+            </article>
+          <% }) %>
+        </div>
+      </div>
+      <div class="carrusel-puntos" id="carrusel-puntos" role="tablist" aria-label="Posiciones del carrusel"></div>
+    </div>
+  </section>
+
+  <!-- ================= COMBOS ================= -->
+  <section id="combos" class="seccion">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">03</span>
+        <h2>Combos y paquetes</h2>
+        <p>Precio por jornada de <%= reglas.horas_jornada %> horas. Súmale adicionales con precio especial al reservar.</p>
+      </header>
+      <div class="grid-combos" data-stagger>
+        <% combosOrden.forEach(c => { %>
+          <article class="combo-card tilt" data-reveal>
+            <div class="combo-foto">
+              <% if (c.imagen) { %><img src="<%= c.imagen %>" alt="<%= c.nombre %>" loading="lazy"><% } %>
+              <span class="chip chip-oro"><i class="fa-solid fa-users"></i> <%= c.personas_min %>–<%= c.personas_max %> personas</span>
+            </div>
+            <div class="combo-cuerpo">
+              <h3><%= c.nombre %></h3>
+              <p><%= c.descripcion %></p>
+              <div class="combo-precio"><strong><%= soles(c.precio) %></strong><small>/ <%= c.horas_base %> h</small></div>
+              <ul class="lista-check">
+                <% c.items.forEach(it => { %><li><%= it.cantidad %>× <%= mapa[it.equipo_id]?.nombre || it.equipo_id %></li><% }) %>
+              </ul>
+              <% if (c.adicionales?.length) { %>
+                <div class="combo-adicionales">
+                  <% c.adicionales.forEach(ad => { %><span><b>+ <%= soles(ad.precio) %></b> <%= ad.etiqueta %></span><% }) %>
+                </div>
+              <% } %>
+              <div class="combo-acciones">
+                <button class="btn btn-primario btn-sm magnetico" data-combo="<%= c.id %>" data-combo-nombre="<%= c.nombre %>" data-combo-horas="<%= c.horas_base %>"><i class="fa-solid fa-calendar-plus"></i> Reservar este combo</button>
+                <a href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent(`Hola AeeS, me interesa el ${c.nombre}. ¿Está disponible para mi fecha?`) %>" class="btn btn-ghost btn-sm" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Preguntar</a>
+              </div>
+            </div>
+            <div class="brillo" aria-hidden="true"></div>
+          </article>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EXPERIENCIAS ================= -->
+  <section class="seccion seccion-alt">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">04</span>
+        <h2>Cada evento suena distinto</h2>
+        <p>No es lo mismo una boda que una fiesta electrónica o una convención: cambiamos el diseño acústico, las luces y los acabados.</p>
+      </header>
+      <div class="experiencias" data-stagger>
+        <article class="experiencia" data-reveal tabindex="0">
+          <img src="<%= portada.boda %>" alt="Boda con sistema de sonido instalado" loading="lazy">
+          <div class="experiencia-texto">
+            <span class="chip chip-oro"><i class="fa-solid fa-ring"></i> Bodas</span>
+            <h3>Elegancia sin cables a la vista</h3>
+            <p>Line array volado o parlantes en trípode, cableado oculto en canaletas, uplighting cálido y micrófonos para ceremonia, padrinos y orquesta.</p>
+            <a href="/asistente?tipo=boda" class="btn btn-ghost btn-sm">Cotizar una boda <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+        <article class="experiencia experiencia-luces" data-reveal tabindex="0">
+          <img src="<%= portada.electronica %>" alt="Escenario con iluminación de colores" loading="lazy">
+          <div class="experiencia-texto">
+            <span class="chip chip-oro"><i class="fa-solid fa-headphones"></i> Fiesta electrónica</span>
+            <h3>Presión sonora y show de luces</h3>
+            <p>Subwoofers dobles JBL SRX828SP, cabezas Beam 290 con humo y escenas DMX programadas para 8 horas de fiesta.</p>
+            <a href="/asistente?tipo=fiesta_electronica" class="btn btn-ghost btn-sm">Cotizar una fiesta <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+        <article class="experiencia" data-reveal tabindex="0">
+          <img src="<%= portada.corporativo %>" alt="Presentación corporativa en pantalla LED" loading="lazy">
+          <div class="experiencia-texto">
+            <span class="chip chip-oro"><i class="fa-solid fa-briefcase"></i> Corporativo</span>
+            <h3>Que se entienda cada palabra</h3>
+            <p>Parlantes con voz clara a volumen moderado, micrófonos inalámbricos Shure y pantalla LED P3.9 que se ve incluso con luz.</p>
+            <a href="/asistente?tipo=corporativo" class="btn btn-ghost btn-sm">Cotizar un evento <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CATÁLOGO DE EQUIPOS ================= -->
+  <section id="equipos" class="seccion">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">05</span>
+        <h2>Equipos</h2>
+        <p>Precio por jornada. Elige una fecha para ver qué está libre ese día y súmalo a tu evento con <i class="fa-solid fa-plus"></i>.</p>
+      </header>
+
+      <div class="barra-catalogo" data-reveal>
+        <div class="filtros" role="toolbar" aria-label="Filtrar por categoría" data-filtros="equipos">
+          <button class="filtro activo" data-filtro="todos" aria-pressed="true">Todos <small><%= equipos.length %></small></button>
+          <% Object.entries(CATEGORIAS).forEach(([id, c]) => { const n = equipos.filter(e => e.categoria === id).length; if (n) { %>
+            <button class="filtro" data-filtro="<%= id %>" aria-pressed="false"><%= c.label %> <small><%= n %></small></button>
+          <% } }) %>
+          <span class="filtros-indicador" aria-hidden="true"></span>
+        </div>
+        <label class="fecha-disponibilidad"><i class="fa-regular fa-calendar"></i> Disponibilidad para
+          <input type="date" id="fecha-catalogo" min="<%= new Date().toISOString().slice(0, 10) %>">
+        </label>
+      </div>
+
+      <div class="grid-equipos" data-grid="equipos" data-stagger>
+        <% equipos.forEach(e => { const libre = e.estado === 'operativo' && e.cantidad_total > 0; %>
+          <article class="equipo-card tilt" data-categoria="<%= e.categoria %>" data-equipo-card="<%= e.id %>" data-reveal>
+            <button class="equipo-abrir" data-equipo="<%= e.id %>" aria-label="Ver detalle de <%= e.nombre %>"></button>
+            <div class="equipo-visual">
+              <%- include('../partials/equipo-visual', { e }) %>
+              <span class="chip"><i class="<%= CATEGORIAS[e.categoria].icono %>"></i> <%= CATEGORIAS[e.categoria].label %></span>
+              <span class="chip estado <%= libre ? 'chip-ok' : 'chip-no' %>" data-estado><%= libre ? 'Disponible' : 'No disponible' %></span>
+            </div>
+            <div class="equipo-cuerpo">
+              <span class="marca"><%= e.marca %> · <%= e.modelo %></span>
+              <h3><%= e.nombre %></h3>
+              <div class="equipo-pie">
+                <span class="precio"><%= soles(e.precio) %> <small>/ jornada</small></span>
+                <button class="btn-agregar" data-agregar="<%= e.id %>" aria-label="Agregar <%= e.nombre %> a mi evento" <%= libre ? '' : 'disabled' %>><i class="fa-solid fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="brillo" aria-hidden="true"></div>
+          </article>
+        <% }) %>
+      </div>
+      <p class="sin-resultados" data-vacio="equipos" hidden>No hay equipos en esta categoría todavía.</p>
+    </div>
+    <%# Datos para el modal: viajan como JSON para no hacer otra petición al abrirlo. %>
+    <script type="application/json" id="datos-equipos"><%- JSON.stringify(equipos.map(e => ({ id: e.id, nombre: e.nombre, marca: e.marca, modelo: e.modelo, categoria: e.categoria, categoriaLabel: CATEGORIAS[e.categoria].label, icono: CATEGORIAS[e.categoria].icono, descripcion: e.descripcion, precio: e.precio, precio_mayor: e.precio_mayor, mayor_desde: e.mayor_desde, ajuste_sin_dmx: e.ajuste_sin_dmx, cantidad_total: e.cantidad_total, potencia_w: e.potencia_w, spl_db: e.spl_db, cobertura_personas: e.cobertura_personas, dimensiones: e.dimensiones, peso_kg: e.peso_kg, estado: e.estado }))).replace(/</g, '\\u003c') %></script>
+  </section>
+
+  <!-- ================= GALERÍA DE EVENTOS ================= -->
+  <section id="eventos" class="seccion seccion-alt">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">06</span>
+        <h2>Eventos realizados</h2>
+        <p>Fotos reales de nuestros montajes. Toca una para verla en grande.</p>
+      </header>
+      <div class="barra-catalogo" data-reveal>
+        <div class="filtros" role="toolbar" aria-label="Filtrar eventos" data-filtros="galeria">
+          <button class="filtro activo" data-filtro="todos" aria-pressed="true">Todos <small><%= publicaciones.length %></small></button>
+          <% tiposGaleria.forEach(t => { %><button class="filtro" data-filtro="<%= t %>" aria-pressed="false"><%= TIPOS_PUB[t] || t %> <small><%= publicaciones.filter(p => p.tipo === t).length %></small></button><% }) %>
+          <span class="filtros-indicador" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="galeria" data-grid="galeria">
+        <% publicaciones.forEach(p => { %>
+          <button class="foto-card" data-categoria="<%= p.tipo %>" data-foto="<%= p.id %>" data-reveal>
+            <img src="<%= p.imagen %>" alt="<%= p.titulo %>" loading="lazy">
+            <figcaption><small><%= TIPOS_PUB[p.tipo] || p.tipo %></small><b><%= p.titulo %></b></figcaption>
+          </button>
+        <% }) %>
+      </div>
+      <p class="sin-resultados" data-vacio="galeria" hidden>Pronto subiremos fotos de este tipo de evento.</p>
+    </div>
+    <script type="application/json" id="datos-galeria"><%- JSON.stringify(publicaciones.map(p => ({ id: p.id, titulo: p.titulo, texto: p.texto, imagen: p.imagen, tipo: p.tipo }))).replace(/</g, '\\u003c') %></script>
+  </section>
+
+  <!-- ================= CÓMO RESERVAR ================= -->
+  <section class="seccion">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">07</span>
+        <h2>Reservar es simple</h2>
+        <p>Sin rodeos: ves precios y disponibilidad sin registrarte; para separar la fecha ingresas con Google o tu celular.</p>
+      </header>
+      <div class="grid-combos" data-stagger>
+        <% [
+          ['fa-solid fa-wand-magic-sparkles', 'Arma tu evento', 'Con el asistente, un combo o equipo por equipo. Ves el total con transporte incluido.'],
+          ['fa-solid fa-mobile-screen', `Separa con el ${reglas.adelanto_pct}% de adelanto`, 'Paga con Yape o con tarjeta en Mercado Pago. Tus equipos y tu fecha quedan bloqueados para ti.'],
+          ['fa-solid fa-handshake', 'Reunión de confirmación', 'Agendamos una llamada o visita para cerrar los detalles: así no hay sorpresas ni cambios el día del evento.'],
+          ['fa-solid fa-truck-ramp-box', 'Montamos y operamos', 'Llegamos con tiempo, montamos con cables ordenados y nuestro técnico opera durante tu evento.']
+        ].forEach(([icono, titulo, texto], i) => { %>
+          <article class="camino tilt" data-reveal>
+            <i class="<%= icono %> grande"></i>
+            <h3><%= i + 1 %>. <%= titulo %></h3>
+            <p><%= texto %></p>
+            <div class="brillo" aria-hidden="true"></div>
+          </article>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CONTACTO ================= -->
+  <section id="contacto" class="seccion seccion-alt">
+    <div class="contenedor">
+      <header class="seccion-titulo" data-reveal>
+        <span class="seccion-num">08</span>
+        <h2>Contacto y cotización</h2>
+        <p>¿Algo muy específico o un evento grande? Escríbenos y te respondemos con una propuesta.</p>
+      </header>
+      <div class="contacto-grid">
+        <div class="contacto-info" data-stagger>
+          <a class="contacto-card tilt" href="https://wa.me/<%= negocio.whatsapp %>" target="_blank" rel="noopener" data-reveal>
+            <span class="contacto-icono wa"><i class="fa-brands fa-whatsapp"></i></span>
+            <div><small>WhatsApp · respuesta rápida</small><strong>+51 <%= negocio.telefono.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3') %></strong></div>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </a>
+          <button type="button" class="contacto-card tilt copiar-email" data-email="<%= negocio.correo %>" data-reveal>
+            <span class="contacto-icono"><i class="fa-regular fa-envelope"></i></span>
+            <div><small>Correo · clic para copiar</small><strong><%= negocio.correo %></strong></div>
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <div class="contacto-card" data-reveal>
+            <span class="contacto-icono"><i class="fa-solid fa-location-dot"></i></span>
+            <div><small>Atendemos</small><strong><%= negocio.direccion %> · <%= negocio.horario %></strong></div>
+          </div>
+        </div>
+
+        <form class="form-contacto" id="form-contacto" novalidate data-reveal>
+          <div class="campo">
+            <input id="nombre" name="nombre" type="text" placeholder=" " autocomplete="name" maxlength="80" required>
+            <label for="nombre">Nombre</label>
+            <small class="campo-error"></small>
+          </div>
+          <div class="dos-campos">
+            <div class="campo">
+              <input id="telefono" name="telefono" type="tel" placeholder=" " autocomplete="tel" maxlength="20" required>
+              <label for="telefono">Celular</label>
+              <small class="campo-error"></small>
+            </div>
+            <div class="campo">
+              <input id="fecha_evento" name="fecha_evento" type="date" placeholder=" ">
+              <label for="fecha_evento">Fecha del evento</label>
+              <small class="campo-error"></small>
+            </div>
+          </div>
+          <div class="campo">
+            <textarea id="mensaje" name="mensaje" rows="5" placeholder=" " maxlength="3000" required></textarea>
+            <label for="mensaje">Cuéntanos tu evento</label>
+            <small class="campo-error"></small>
+            <span class="contador-caracteres"><span id="contador">0</span>/3000</span>
+          </div>
+          <input type="text" name="web" class="honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="submit" class="btn btn-primario btn-bloque magnetico">
+            <span class="btn-texto"><i class="fa-regular fa-paper-plane"></i> Enviar cotización</span>
+            <span class="btn-cargando"><i class="fa-solid fa-circle-notch fa-spin"></i> Enviando…</span>
+          </button>
+          <button type="button" class="btn btn-wa btn-bloque" id="enviar-wa"><i class="fa-brands fa-whatsapp"></i> Mejor enviarlo por WhatsApp</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<%# Modal de detalle de equipo (lo rellena main.js) %>
+<dialog class="modal" id="modal-equipo" aria-labelledby="modal-titulo">
+  <div class="modal-contenido">
+    <button class="modal-cerrar btn-icono" data-cerrar-modal aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-visual" id="modal-visual"></div>
+    <div class="modal-cuerpo">
+      <span class="chip" id="modal-cat"></span> <span class="chip" id="modal-estado"></span>
+      <h3 id="modal-titulo"></h3>
+      <p id="modal-detalle"></p>
+      <div class="ficha" id="modal-ficha"></div>
+      <div class="modal-nav">
+        <button class="btn btn-ghost btn-sm" data-modal-nav="-1"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+        <button class="btn btn-primario btn-sm" id="modal-agregar"><i class="fa-solid fa-plus"></i> Agregar a mi evento</button>
+        <button class="btn btn-ghost btn-sm" data-modal-nav="1">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<%# Lightbox de la galería %>
+<dialog class="modal modal-foto" id="modal-foto" aria-label="Foto del evento">
+  <figure class="modal-contenido">
+    <button class="modal-cerrar btn-icono" data-cerrar-modal aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    <img src="" alt="" id="foto-grande">
+    <figcaption><h3 id="foto-titulo"></h3><p id="foto-texto"></p>
+      <div class="modal-nav" style="border:0;padding-top:.8rem">
+        <button class="btn btn-ghost btn-sm" data-foto-nav="-1"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+        <a href="/asistente" class="btn btn-primario btn-sm">Quiero algo así</a>
+        <button class="btn btn-ghost btn-sm" data-foto-nav="1">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+    </figcaption>
+  </figure>
+</dialog>
+
+<%- include('../partials/footer') %>

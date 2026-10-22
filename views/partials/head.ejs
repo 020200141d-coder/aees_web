@@ -1,0 +1,27 @@
+<%#
+  head.ejs — <head> compartido por todas las páginas públicas.
+  Recibe `titulo` (null en la portada) y opcionalmente `extraHead` (por ejemplo, el CSS de Leaflet).
+  La meta csrf la leen los fetch() de los scripts para enviar el token en cada POST.
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="<%= negocio.nombre %> — <%= negocio.descripcion %>">
+  <meta name="theme-color" content="#0D1B2A">
+  <meta name="csrf" content="<%= csrf %>">
+  <title><%= titulo ? `${titulo} · ${negocio.nombre}` : `${negocio.nombre} – ${negocio.eslogan}` %></title>
+  <meta property="og:title" content="<%= negocio.nombre %> – <%= negocio.eslogan %>">
+  <meta property="og:description" content="<%= negocio.descripcion %>">
+  <% if (portada.hero && portada.hero.startsWith('http')) { %><meta property="og:image" content="<%= portada.hero %>"><% } %>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css">
+  <% if (typeof extraHead !== 'undefined') { %><%- extraHead %><% } %>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230D1B2A'/><rect x='7' y='14' width='3' height='10' rx='1' fill='%23F5A623'/><rect x='12.5' y='8' width='3' height='16' rx='1' fill='%23F5A623'/><rect x='18' y='11' width='3' height='13' rx='1' fill='%23E8784A'/><rect x='23.5' y='16' width='3' height='8' rx='1' fill='%23F5A623'/></svg>">
+</head>

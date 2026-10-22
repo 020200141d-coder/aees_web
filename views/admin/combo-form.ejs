@@ -1,0 +1,84 @@
+<%#
+  admin/combo-form.ejs — armar un combo con VISTA PREVIA EN VIVO.
+  A la izquierda el formulario (equipos incluidos y adicionales con precio especial);
+  a la derecha la tarjeta tal como se verá en la portada, que admin.js actualiza
+  mientras escribes, junto con la comparación "precio suelto vs. precio combo".
+%>
+<% const { TIPOS_EVENTO } = util; const err = k => errores[k] ? `<span class="campo-error-admin">${errores[k]}</span>` : ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1><%= nuevo ? 'Nuevo combo' : `Editar ${c.nombre}` %></h1><p>Mira a la derecha cómo queda en la portada mientras lo armas.</p></div>
+  <a href="/admin/combos" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+</header>
+<% if (Object.keys(errores).length) { %><div class="flash flash-error" role="alert">Revisa los campos marcados.</div><% } %>
+
+<div class="rejilla rejilla-2">
+  <form method="post" action="<%= nuevo ? '/admin/combos' : `/admin/combos/${c.id}` %>" class="tarjeta" id="form-combo" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple ancho<%= errores.nombre ? ' error' : '' %>">Nombre del combo<input name="nombre" value="<%= c.nombre || '' %>" maxlength="100" data-previa="nombre" required><%- err('nombre') %></label>
+      <label class="campo-simple ancho">Descripción<textarea name="descripcion" maxlength="1500" data-previa="descripcion"><%= c.descripcion || '' %></textarea></label>
+      <label class="campo-simple<%= errores.precio ? ' error' : '' %>">Precio del combo (S/)<input name="precio" type="number" step="1" min="0" value="<%= c.precio ?? '' %>" data-previa="precio" required><%- err('precio') %></label>
+      <label class="campo-simple<%= errores.horas_base ? ' error' : '' %>">Horas que incluye<input name="horas_base" type="number" min="1" max="24" value="<%= c.horas_base || 4 %>" data-previa="horas"><%- err('horas_base') %></label>
+      <label class="campo-simple">Personas desde<input name="personas_min" type="number" min="0" value="<%= c.personas_min ?? 0 %>" data-previa="min"></label>
+      <label class="campo-simple<%= errores.personas_max ? ' error' : '' %>">Personas hasta<input name="personas_max" type="number" min="0" value="<%= c.personas_max ?? 100 %>" data-previa="max"><%- err('personas_max') %></label>
+      <label class="campo-simple">Nivel
+        <select name="nivel"><% [['esencial', 'Esencial'], ['fiesta', 'Fiesta'], ['produccion', 'Producción']].forEach(([v, t]) => { %><option value="<%= v %>" <%= c.nivel === v ? 'selected' : '' %>><%= t %></option><% }) %></select>
+      </label>
+      <label class="campo-simple">Orden<input name="orden" type="number" value="<%= c.orden || 0 %>"></label>
+      <div class="campo-simple ancho"><span>Tipos de evento (el asistente lo sugiere para estos)</span>
+        <div class="casillas"><% Object.entries(TIPOS_EVENTO).forEach(([id, t]) => { %><label class="casilla"><input type="checkbox" name="tipos_evento" value="<%= id %>" <%= (c.tipos_evento || []).includes(id) ? 'checked' : '' %>> <%= t.label %></label><% }) %></div>
+        <%- err('tipos_evento') %>
+      </div>
+    </div>
+
+    <h2 style="margin-top:1.4rem"><i class="fa-solid fa-boxes-stacked"></i> Equipos incluidos</h2>
+    <div class="filas" id="filas-items" data-filas="items"></div>
+    <%- err('items') %>
+    <button type="button" class="btn btn-ghost btn-sm" style="margin-top:.6rem" data-agregar-fila="items"><i class="fa-solid fa-plus"></i> Agregar equipo</button>
+
+    <h2 style="margin-top:1.4rem"><i class="fa-solid fa-circle-plus"></i> Adicionales con precio especial</h2>
+    <p class="suave" style="font-size:.85rem;margin-bottom:.6rem">Ej.: «2 JBL EON615 adicionales» por S/ 100. El cliente los marca al reservar.</p>
+    <div class="filas" id="filas-adicionales" data-filas="adicionales"></div>
+    <%- err('adicionales') %>
+    <button type="button" class="btn btn-ghost btn-sm" style="margin-top:.6rem" data-agregar-fila="adicionales"><i class="fa-solid fa-plus"></i> Agregar adicional</button>
+
+    <h2 style="margin-top:1.4rem"><i class="fa-regular fa-image"></i> Foto y publicación</h2>
+    <div class="form-rejilla">
+      <%- include('_foto', { nombre: 'imagen', valor: c.imagen, error: errores.imagen }) %>
+      <label class="campo-simple">Fuente de la foto<input name="imagen_fuente" value="<%= c.imagen_fuente || '' %>" maxlength="120"></label>
+      <div class="casillas ancho">
+        <label class="casilla"><input type="checkbox" name="publicado" <%= c.publicado ? 'checked' : '' %>> Publicado</label>
+        <label class="casilla"><input type="checkbox" name="destacado" <%= c.destacado ? 'checked' : '' %>> Destacado (aparece primero)</label>
+      </div>
+    </div>
+    <div class="form-pie">
+      <a href="/admin/combos" class="btn btn-ghost btn-sm">Cancelar</a>
+      <button class="btn btn-primario btn-sm"><i class="fa-solid fa-floppy-disk"></i> Guardar combo</button>
+    </div>
+  </form>
+
+  <aside class="vista-previa">
+    <p class="suave" style="font-size:.8rem;margin-bottom:.6rem"><i class="fa-regular fa-eye"></i> Vista previa en la portada</p>
+    <article class="combo-card" id="previa">
+      <div class="combo-foto"><img id="previa-img" src="<%= c.imagen || '' %>" alt="" <%= c.imagen ? '' : 'hidden' %>><span class="chip chip-oro"><i class="fa-solid fa-users"></i> <span id="previa-personas"></span></span></div>
+      <div class="combo-cuerpo">
+        <h3 id="previa-nombre"></h3>
+        <p id="previa-descripcion"></p>
+        <div class="combo-precio"><strong id="previa-precio"></strong><small id="previa-horas"></small></div>
+        <ul class="lista-check" id="previa-items"></ul>
+        <div class="combo-adicionales" id="previa-adicionales"></div>
+        <div class="combo-acciones"><span class="btn btn-primario btn-sm"><i class="fa-solid fa-calendar-plus"></i> Reservar este combo</span></div>
+      </div>
+    </article>
+    <div class="ahorro" id="ahorro"></div>
+  </aside>
+</div>
+
+<%# Datos para armar las filas y la vista previa sin pedir nada más al servidor. %>
+<script type="application/json" id="datos-combo"><%- JSON.stringify({
+  equipos: equipos.map(e => ({ id: e.id, nombre: e.nombre, precio: e.precio, precio_adicional: e.precio_adicional, publicado: e.publicado })),
+  items: c.items || [],
+  adicionales: c.adicionales || []
+}).replace(/</g, '\\u003c') %></script>
+<%- include('_fin') %>

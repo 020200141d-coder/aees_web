@@ -1,0 +1,15 @@
+# Dependencias (se instalan con npm install)
+node_modules/
+# Claves y configuración local: NUNCA se suben
+.env
+# Base de datos local de desarrollo y su archivo temporal
+data/db.local.json
+data/db.local.json.tmp
+# Fotos subidas en modo local
+public/uploads/
+# Mensajes antiguos del portafolio
+mensajes/
+# Registros y archivos del sistema
+*.log
+.DS_Store
+Thumbs.db

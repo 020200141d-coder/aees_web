@@ -1,0 +1,31 @@
+<%# admin/combos.ejs — combos y ofertas: lista con precio, contenido, adicionales y publicación. %>
+<% const { soles, TIPOS_EVENTO } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Combos y ofertas</h1><p>Paquetes armados con precio especial. El asistente los sugiere según el tipo de evento y los invitados.</p></div>
+  <a href="/admin/combos/nuevo" class="btn btn-primario btn-sm"><i class="fa-solid fa-plus"></i> Nuevo combo</a>
+</header>
+<div class="tabla-caja">
+  <table class="tabla">
+    <thead><tr><th></th><th>Combo</th><th>Incluye</th><th>Para</th><th class="num">Precio</th><th class="num">Suelto</th><th>Publicado</th><th></th></tr></thead>
+    <tbody>
+      <% if (!combos.length) { %><tr><td colspan="8" class="suave" style="text-align:center;padding:2rem">Aún no hay combos.</td></tr><% } %>
+      <% combos.forEach(c => { const suelto = c.items.reduce((s, it) => s + (mapa[it.equipo_id]?.precio || 0) * it.cantidad, 0); %>
+        <tr>
+          <td><% if (c.imagen) { %><img class="miniatura" src="<%= c.imagen %>" alt=""><% } else { %><div class="miniatura"><i class="fa-solid fa-box-open"></i></div><% } %></td>
+          <td><b><%= c.nombre %></b><br><small class="suave"><%= c.nivel %> · <%= c.horas_base %> h<%= c.destacado ? ' · destacado' : '' %></small></td>
+          <td><small><%= c.items.map(it => `${it.cantidad}× ${mapa[it.equipo_id]?.nombre || it.equipo_id}`).join(', ') %></small><% if (c.adicionales?.length) { %><br><small style="color:var(--secundario)">+ <%= c.adicionales.length %> adicional(es)</small><% } %></td>
+          <td><small><%= c.personas_min %>–<%= c.personas_max %> pers.<br><%= (c.tipos_evento || []).map(t => TIPOS_EVENTO[t]?.label).join(', ') %></small></td>
+          <td class="num"><b><%= soles(c.precio) %></b></td>
+          <td class="num"><small class="suave"><%= soles(suelto) %></small></td>
+          <td><button type="button" class="interruptor" role="switch" aria-checked="<%= c.publicado %>" aria-label="Publicar <%= c.nombre %>" data-alternar="/admin/combos/<%= c.id %>/publicado"></button></td>
+          <td class="acciones" style="flex-wrap:nowrap">
+            <a class="btn-icono" href="/admin/combos/<%= c.id %>/editar" aria-label="Editar"><i class="fa-solid fa-pen"></i></a>
+            <form method="post" action="/admin/combos/<%= c.id %>/eliminar" data-confirmar="¿Eliminar el combo «<%= c.nombre %>»?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('_fin') %>

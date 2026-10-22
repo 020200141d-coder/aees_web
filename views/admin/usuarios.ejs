@@ -1,0 +1,37 @@
+<%#
+  admin/usuarios.ejs — cuentas del personal. "Publicador" solo gestiona combos y
+  galería; "Administrador" puede todo. Los clientes se registran solos desde el sitio.
+%>
+<% const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Personal</h1><p>Quién puede entrar al panel.</p></div></header>
+<div class="rejilla rejilla-2">
+  <div class="tabla-caja">
+    <table class="tabla">
+      <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th></th></tr></thead>
+      <tbody>
+        <% personal.forEach(u => { %>
+          <tr>
+            <td><b><%= u.nombre %></b></td><td><%= u.email %></td>
+            <td><span class="chip <%= u.rol === 'admin' ? 'chip-oro' : '' %>"><%= u.rol === 'admin' ? 'Administrador' : 'Publicador' %></span></td>
+            <td><% if (u.id !== usuario.id) { %><form method="post" action="/admin/usuarios/<%= u.id %>/eliminar" data-confirmar="¿Quitar el acceso de <%= u.email %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form><% } else { %><small class="suave">tú</small><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="/admin/usuarios" class="tarjeta" novalidate>
+    <h2>Nueva cuenta</h2>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple ancho<%= errores.nombre ? ' error' : '' %>">Nombre<input name="nombre" value="<%= datos.nombre || '' %>" maxlength="80"><%- err('nombre') %></label>
+      <label class="campo-simple ancho<%= errores.email ? ' error' : '' %>">Correo<input name="email" type="email" value="<%= datos.email || '' %>" maxlength="120"><%- err('email') %></label>
+      <label class="campo-simple<%= errores.clave ? ' error' : '' %>">Contraseña inicial<input name="clave" type="password" minlength="8" autocomplete="new-password"><%- err('clave') %></label>
+      <label class="campo-simple">Rol
+        <select name="rol"><option value="publicador" <%= datos.rol !== 'admin' ? 'selected' : '' %>>Publicador (combos y galería)</option><option value="admin" <%= datos.rol === 'admin' ? 'selected' : '' %>>Administrador (todo)</option></select>
+      </label>
+    </div>
+    <div class="form-pie"><button class="btn btn-primario btn-sm">Crear cuenta</button></div>
+  </form>
+</div>
+<%- include('_fin') %>

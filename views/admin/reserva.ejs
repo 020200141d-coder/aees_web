@@ -1,0 +1,104 @@
+<%#
+  admin/reserva.ejs — detalle de una reserva para el admin:
+  cliente y contacto, equipos, desglose, pagos (aprobar/rechazar Yape, registrar pago manual),
+  cambio de estado, reunión solicitada, ruta para el conductor y notas internas.
+%>
+<% const { soles, fechaLarga, ESTADOS_RESERVA, TIPOS_EVENTO } = util; const dc = r.datos_cliente || {}; const ruta = r.encuesta?.ruta; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Reserva <%= r.codigo %></h1><p><%= fechaLarga(r.fecha_evento) %> · <span class="estado-reserva estado-<%= r.estado %>" style="font-size:.78rem"><%= ESTADOS_RESERVA[r.estado] %></span></p></div>
+  <div class="acciones">
+    <a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= dc.celular %>?text=<%= encodeURIComponent(`Hola ${dc.nombre}, te escribe AeeS Acústico por tu reserva ${r.codigo} del ${r.fecha_evento}.`) %>"><i class="fa-brands fa-whatsapp"></i> Escribir al cliente</a>
+    <a class="btn btn-ghost btn-sm" href="/reservas/<%= r.codigo %>" target="_blank">Ver como cliente</a>
+    <a class="btn btn-ghost btn-sm" href="/admin/reservas"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+  </div>
+</header>
+
+<div class="rejilla rejilla-2">
+  <div>
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-champagne-glasses"></i> Evento</h2>
+      <div class="info-ruta">
+        <div class="dato"><small>Tipo</small><b><%= TIPOS_EVENTO[r.tipo_evento]?.label || r.tipo_evento %></b></div>
+        <div class="dato"><small>Invitados · espacio</small><b><%= r.personas || '?' %> · <%= r.espacio %></b></div>
+        <div class="dato"><small>Hora · duración</small><b><%= r.hora_inicio || '—' %> · <%= r.horas %> h</b></div>
+        <div class="dato"><small>Transporte</small><b><%= r.vehiculo || '—' %> · <%= r.distancia_km || '?' %> km</b></div>
+      </div>
+      <p style="margin-top:.8rem"><i class="fa-solid fa-location-dot" style="color:var(--secundario)"></i> <%= r.lugar %></p>
+      <% if (r.lat) { %><p style="margin-top:.4rem"><a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="<%= ruta?.enlace_conductor || `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}` %>"><i class="fa-solid fa-route"></i> Ruta para el conductor (Google Maps)</a> <% if (r.encuesta?.carga) { %><small class="suave">Carga: <%= r.encuesta.carga.volumen_l %> L · <%= r.encuesta.carga.peso_kg %> kg · pieza más larga <%= r.encuesta.carga.largo_cm %> cm</small><% } %></p><% } %>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-boxes-stacked"></i> Equipos a preparar</h2>
+      <ul class="lista-check">
+        <% (r.items || []).forEach(it => { %><li><b><%= it.cantidad %>×</b>&nbsp;<%= it.nombre || it.equipo_id %></li><% }) %>
+      </ul>
+      <div class="resumen-precio" style="margin-top:1rem">
+        <% (r.encuesta?.lineas || []).forEach(l => { %><div><span><%= l.tipo === 'equipo' ? `${l.cantidad}× ` : '' %><%= l.nombre %></span><span><%= soles(l.subtotal) %></span></div><% }) %>
+        <div><span>Técnico</span><span><%= soles(r.tecnico) %></span></div>
+        <div><span>Transporte</span><span><%= soles(r.transporte) %></span></div>
+        <% if (Number(r.descuento)) { %><div><span>Descuento <%= r.promo_codigo || '' %></span><span>− <%= soles(r.descuento) %></span></div><% } %>
+        <div class="total"><span>Total</span><b><%= soles(r.total) %></b></div>
+        <div class="adelanto"><span>Adelanto <%= r.adelanto_pct %>% · pagado</span><span><%= soles(r.adelanto) %> · <%= soles(r.pagado) %></span></div>
+        <div><span>Saldo por cobrar el día del evento</span><b><%= soles(Math.max(0, r.total - (r.pagado || 0))) %></b></div>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-note-sticky"></i> Notas internas</h2>
+      <form method="post" action="/admin/reservas/<%= r.codigo %>/notas" style="display:grid;gap:.6rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <label class="campo-simple"><span class="oculto-accesible">Notas</span><textarea name="notas_admin" placeholder="Ej.: 2 EON615 los pone el proveedor aliado X; montaje desde las 15:00."><%= r.notas_admin || '' %></textarea></label>
+        <button class="btn btn-ghost btn-sm" style="justify-self:start">Guardar notas</button>
+      </form>
+    </section>
+  </div>
+
+  <div>
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-user"></i> Cliente</h2>
+      <p><b><%= dc.nombre %></b></p>
+      <p class="suave">DNI <%= dc.dni %> · <i class="fa-brands fa-whatsapp"></i> <%= dc.celular %><%= dc.correo ? ` · ${dc.correo}` : '' %></p>
+      <% if (cliente) { %><p class="suave" style="font-size:.8rem">Cuenta: <%= cliente.email || cliente.celular %></p><% } %>
+      <% if (r.reunion) { %><div class="aviso aviso-ok" style="margin-top:.8rem"><i class="fa-solid fa-handshake"></i>Reunión pedida: <b><%= r.reunion.fecha %> <%= r.reunion.hora %></b> (<%= r.reunion.modalidad %>)</div><% } %>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-arrows-rotate"></i> Estado</h2>
+      <form method="post" action="/admin/reservas/<%= r.codigo %>/estado" class="acciones">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <select name="estado" class="estado-select" style="padding:.55rem">
+          <% Object.entries(ESTADOS_RESERVA).forEach(([k, v]) => { %><option value="<%= k %>" <%= r.estado === k ? 'selected' : '' %>><%= v %></option><% }) %>
+        </select>
+        <button class="btn btn-primario btn-sm">Cambiar</button>
+      </form>
+      <p class="suave" style="font-size:.78rem;margin-top:.6rem">Flujo: pendiente → adelanto pagado → <b>confirmada</b> (después de la reunión) → completada.</p>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-money-bill-wave"></i> Pagos</h2>
+      <% if (!pagos.length) { %><p class="suave">Sin pagos todavía.</p><% } %>
+      <div class="lista-agenda">
+        <% pagos.forEach(p => { %>
+          <div class="mensaje">
+            <b><%= { mercadopago: 'Mercado Pago', yape: 'Yape / manual', simulado: 'Simulado' }[p.metodo] %> · <%= soles(p.monto) %></b>
+            <small class="suave">Ref. <%= p.referencia %> · <%= new Date(p.creado_en).toLocaleString('es-PE', { timeZone: 'America/Lima' }) %> · <b style="color:<%= p.estado === 'aprobado' ? 'var(--disponible)' : p.estado === 'rechazado' ? 'var(--no-disponible)' : 'var(--primario)' %>"><%= p.estado %></b></small>
+            <% if (p.estado === 'pendiente') { %>
+              <div class="mensaje-pie">
+                <form method="post" action="/admin/pagos/<%= p.id %>/aprobar"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-primario btn-sm">Aprobar</button></form>
+                <form method="post" action="/admin/pagos/<%= p.id %>/rechazar" data-confirmar="¿Rechazar este pago?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm">Rechazar</button></form>
+              </div>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+      <form method="post" action="/admin/reservas/<%= r.codigo %>/pago-manual" class="fila-form" style="margin-top:1rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input name="monto" type="number" step="0.01" min="0.01" placeholder="Monto S/" required aria-label="Monto">
+        <input name="referencia" maxlength="40" placeholder="Referencia (efectivo, transferencia…)" aria-label="Referencia">
+        <button class="btn btn-ghost btn-sm">Registrar pago</button>
+      </form>
+    </section>
+  </div>
+</div>
+<%- include('_fin') %>

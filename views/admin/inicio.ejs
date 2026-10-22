@@ -1,0 +1,116 @@
+<%#
+  admin/inicio.ejs — tablero del día a día:
+   • KPIs (por cobrar, confirmadas, adelantos del mes)
+   • Solicitudes de "fecha ocupada" y Yapes por verificar (lo urgente primero)
+   • Próximos eventos con botones rápidos (confirmar / completar)
+   • Calendario del mes con los eventos de cada día
+%>
+<%
+  const { soles, ESTADOS_RESERVA } = util;
+  const esAdmin = usuario.rol === 'admin';
+  const [anioMes, numMes] = mes.split('-').map(Number);
+  const primero = new Date(anioMes, numMes - 1, 1);
+  const diasMes = new Date(anioMes, numMes, 0).getDate();
+  const desfase = (primero.getDay() + 6) % 7; // lunes = 0
+  const nombreMes = primero.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }).replace(/^./, l => l.toUpperCase());
+  const mesRel = d => { const x = new Date(anioMes, numMes - 1 + d, 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; };
+  const corto = f => new Date(`${f}T12:00:00`).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }).split(' ');
+%>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Hola, <%= usuario.nombre.split(' ')[0] %></h1><p>Esto es lo que pasa en AeeS.</p></div>
+  <div class="acciones">
+    <a href="/admin/combos/nuevo" class="btn btn-ghost btn-sm"><i class="fa-solid fa-box-open"></i> Nuevo combo</a>
+    <a href="/admin/galeria/nueva" class="btn btn-ghost btn-sm"><i class="fa-regular fa-image"></i> Subir fotos de un evento</a>
+    <% if (esAdmin) { %><a href="/admin/equipos/nuevo" class="btn btn-primario btn-sm"><i class="fa-solid fa-plus"></i> Nuevo equipo</a><% } %>
+  </div>
+</header>
+
+<% if (esAdmin) { %>
+<div class="kpis">
+  <div class="kpi"><small>Reservas esperando adelanto</small><b><%= stats.porPagar %></b></div>
+  <div class="kpi"><small>Eventos confirmados por venir</small><b><%= stats.confirmadas %></b></div>
+  <div class="kpi"><small>Adelantos cobrados este mes</small><b><%= soles(stats.adelantosMes) %></b></div>
+  <div class="kpi"><small>Equipos · combos publicados</small><b><%= stats.equipos %> · <%= stats.combos %></b></div>
+</div>
+
+<div class="rejilla rejilla-2">
+  <div>
+    <% if (solicitudes.length || yapePendientes.length) { %>
+      <section class="tarjeta">
+        <h2><i class="fa-solid fa-bell" style="color:var(--secundario)"></i> Para atender ahora</h2>
+        <div class="lista-agenda">
+          <% yapePendientes.forEach(p => { %>
+            <div class="mensaje ocupada">
+              <b><i class="fa-solid fa-mobile-screen" style="color:#c77dff"></i> Yape por verificar · <%= soles(p.monto) %></b>
+              <small class="suave">Reserva <a href="/admin/reservas/<%= p.reserva?.codigo %>" style="color:var(--primario)"><%= p.reserva?.codigo %></a> · operación <b><%= p.referencia %></b> · <%= p.reserva?.datos_cliente?.nombre %></small>
+              <div class="mensaje-pie">
+                <form method="post" action="/admin/pagos/<%= p.id %>/aprobar"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="volver" value="/admin"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-check"></i> Lo vi en Yape: aprobar</button></form>
+                <form method="post" action="/admin/pagos/<%= p.id %>/rechazar" data-confirmar="¿Rechazar este pago? El cliente deberá volver a pagar."><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="volver" value="/admin"><button class="btn btn-ghost btn-sm">Rechazar</button></form>
+              </div>
+            </div>
+          <% }) %>
+          <% solicitudes.forEach(m => { %>
+            <div class="mensaje ocupada">
+              <b><i class="fa-solid fa-calendar-xmark" style="color:var(--secundario)"></i> Fecha ocupada: <%= m.fecha_evento %> · <%= m.nombre %></b>
+              <small class="suave"><%= m.datos?.resumen %></small>
+              <small>Faltan: <%= (m.datos?.faltan || []).map(f => `${f.nombre} (${f.pedido - f.libre})`).join(', ') || '—' %></small>
+              <div class="mensaje-pie">
+                <a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= String(m.telefono).replace(/\D/g, '').slice(-9) %>?text=<%= encodeURIComponent(`Hola ${m.nombre}, te escribe AeeS Acústico por tu evento del ${m.fecha_evento}. Tenemos una propuesta para completar los equipos. ¿Te parece si coordinamos una reunión?`) %>"><i class="fa-brands fa-whatsapp"></i> Proponer solución</a>
+                <form method="post" action="/admin/mensajes/<%= m.id %>/leido"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm">Marcar atendida</button></form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-list-check"></i> Próximos eventos</h2>
+      <% if (!proximas.length) { %><p class="suave">No hay eventos próximos.</p><% } %>
+      <div class="lista-agenda">
+        <% proximas.forEach(r => { const [d, m] = corto(r.fecha_evento); %>
+          <div class="item-agenda">
+            <div class="fecha-caja"><b><%= d %></b><small><%= m %></small></div>
+            <div>
+              <a href="/admin/reservas/<%= r.codigo %>"><b><%= r.datos_cliente?.nombre || 'Cliente' %></b> · <%= r.codigo %></a>
+              <small><%= (r.lugar || '').split(',')[0] %> · <%= r.personas || '?' %> pers. · <%= soles(r.total) %> · <span class="estado-reserva estado-<%= r.estado %>" style="padding:.1rem .5rem;font-size:.72rem"><%= ESTADOS_RESERVA[r.estado] %></span><%= r.reunion ? ` · reunión ${r.reunion.fecha} ${r.reunion.hora}` : '' %></small>
+            </div>
+            <div class="acciones">
+              <% if (r.estado === 'adelanto_pagado') { %>
+                <form method="post" action="/admin/reservas/<%= r.codigo %>/estado"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="estado" value="confirmada"><input type="hidden" name="volver" value="/admin"><button class="btn btn-primario btn-sm" title="Ya se hizo la reunión"><i class="fa-solid fa-check-double"></i> Confirmar</button></form>
+              <% } else if (r.estado === 'confirmada' && r.fecha_evento <= hoy) { %>
+                <form method="post" action="/admin/reservas/<%= r.codigo %>/estado"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="estado" value="completada"><input type="hidden" name="volver" value="/admin"><button class="btn btn-ghost btn-sm"><i class="fa-solid fa-flag-checkered"></i> Completar</button></form>
+              <% } %>
+              <% if (r.lat) { %><a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" title="Ruta para el conductor" href="<%= r.encuesta?.ruta?.enlace_conductor || `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}` %>"><i class="fa-solid fa-route"></i></a><% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  </div>
+
+  <section class="tarjeta">
+    <h2 style="justify-content:space-between"><span><i class="fa-regular fa-calendar"></i> <%= nombreMes %></span>
+      <span class="acciones"><a class="btn-icono" href="/admin?mes=<%= mesRel(-1) %>" aria-label="Mes anterior"><i class="fa-solid fa-chevron-left"></i></a><a class="btn-icono" href="/admin?mes=<%= mesRel(1) %>" aria-label="Mes siguiente"><i class="fa-solid fa-chevron-right"></i></a></span>
+    </h2>
+    <div class="calendario">
+      <% ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].forEach(d => { %><span class="dia-semana"><%= d %></span><% }) %>
+      <% for (let i = 0; i < desfase; i++) { %><div class="dia fuera"></div><% } %>
+      <% for (let dia = 1; dia <= diasMes; dia++) { const f = `${mes}-${String(dia).padStart(2, '0')}`; const evs = delMes.filter(r => r.fecha_evento === f); %>
+        <div class="dia<%= f === hoy ? ' hoy' : '' %>"><span><%= dia %></span>
+          <% evs.forEach(r => { %><a class="evento<%= ['adelanto_pagado', 'confirmada', 'completada'].includes(r.estado) ? ' ok' : '' %>" href="/admin/reservas/<%= r.codigo %>" title="<%= r.codigo %> · <%= ESTADOS_RESERVA[r.estado] %>"><%= (r.datos_cliente?.nombre || r.codigo).split(' ')[0] %></a><% }) %>
+        </div>
+      <% } %>
+    </div>
+    <p class="suave" style="font-size:.78rem;margin-top:.8rem"><span class="chip chip-oro">pendiente</span> <span class="chip chip-ok">pagada / confirmada</span></p>
+  </section>
+</div>
+<% } else { %>
+  <div class="tarjeta">
+    <h2><i class="fa-solid fa-bullhorn"></i> Tu espacio de publicador</h2>
+    <p class="suave">Arma combos y ofertas con vista previa en vivo, y sube fotos de los eventos realizados para la galería de la portada.</p>
+    <div class="acciones" style="margin-top:1rem"><a class="btn btn-primario btn-sm" href="/admin/combos">Combos y ofertas</a><a class="btn btn-ghost btn-sm" href="/admin/galeria">Galería</a></div>
+  </div>
+<% } %>
+<%- include('_fin') %>

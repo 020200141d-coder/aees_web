@@ -1,0 +1,44 @@
+<%# cuenta/panel.ejs — "Mi cuenta": reservas del cliente con su estado. %>
+<% const { soles, fechaLarga, ESTADOS_RESERVA } = util; %>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <div class="contenedor">
+    <header class="pagina-titulo seccion-titulo-flex" style="display:flex">
+      <div>
+        <span class="seccion-num">Mi cuenta</span>
+        <h1>Hola, <span class="texto-acento"><%= usuario.nombre.split(' ')[0] %></span></h1>
+        <p><%= usuario.email || usuario.celular %></p>
+      </div>
+      <form method="post" action="/cuenta/salir"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button></form>
+    </header>
+    <%- include('../partials/flash') %>
+
+    <section class="panel">
+      <h2 style="font-size:1.4rem;margin-bottom:1rem">Mis reservas</h2>
+      <% if (!reservas.length) { %>
+        <div class="vacio"><i class="fa-regular fa-calendar"></i><p>Aún no tienes reservas.</p><a href="/asistente" class="btn btn-primario">Armar mi evento</a></div>
+      <% } else { %>
+        <div style="overflow-x:auto">
+        <table class="tabla-simple">
+          <thead><tr><th>Código</th><th>Fecha</th><th>Lugar</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            <% reservas.forEach(r => { %>
+              <tr>
+                <td><b><%= r.codigo %></b></td>
+                <td><%= fechaLarga(r.fecha_evento) %></td>
+                <td><%= (r.lugar || '').split(',')[0] %></td>
+                <td><%= soles(r.total) %></td>
+                <td><span class="estado-reserva estado-<%= r.estado %>"><%= ESTADOS_RESERVA[r.estado] %></span></td>
+                <td><a class="btn btn-ghost btn-sm" href="/reservas/<%= r.codigo %>">Ver</a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</main>
+<%- include('../partials/footer') %>

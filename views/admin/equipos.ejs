@@ -1,0 +1,58 @@
+<%#
+  admin/equipos.ejs — tabla de equipos con buscar, filtrar por categoría,
+  interruptor rápido de "publicado", cambio de estado y eliminar con confirmación.
+  "Libres hoy" descuenta lo reservado para la fecha de hoy.
+%>
+<% const { soles, CATEGORIAS } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Equipos</h1><p><%= equipos.length %> equipos · precio por jornada</p></div>
+  <a href="/admin/equipos/nuevo" class="btn btn-primario btn-sm"><i class="fa-solid fa-plus"></i> Agregar equipo</a>
+</header>
+
+<form class="barra-filtros" method="get">
+  <input type="search" name="q" value="<%= q %>" placeholder="Buscar por nombre, marca, modelo o código" aria-label="Buscar">
+  <select name="categoria" aria-label="Categoría" onchange="this.form.submit()">
+    <option value="">Todas las categorías</option>
+    <% Object.entries(CATEGORIAS).forEach(([id, c]) => { %><option value="<%= id %>" <%= cat === id ? 'selected' : '' %>><%= c.label %></option><% }) %>
+  </select>
+  <button class="btn btn-ghost btn-sm"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+  <% if (q || cat) { %><a class="btn btn-ghost btn-sm" href="/admin/equipos">Limpiar</a><% } %>
+</form>
+
+<div class="tabla-caja">
+  <table class="tabla">
+    <thead><tr><th></th><th>Equipo</th><th>Categoría</th><th class="num">Precio</th><th class="num">Stock</th><th class="num">Libres hoy</th><th>Estado</th><th>Publicado</th><th></th></tr></thead>
+    <tbody>
+      <% if (!equipos.length) { %><tr><td colspan="9" class="suave" style="text-align:center;padding:2rem">No hay equipos con ese filtro.</td></tr><% } %>
+      <% equipos.forEach(e => { %>
+        <tr>
+          <td><div class="miniatura"><%- include('../partials/equipo-visual', { e }) %></div></td>
+          <td><b><%= e.nombre %></b><br><small class="suave"><%= e.codigo %> · <%= e.marca %> <%= e.modelo %> · rol <%= e.rol %></small></td>
+          <td><%= CATEGORIAS[e.categoria]?.label %></td>
+          <td class="num"><%= soles(e.precio) %><% if (e.mayor_desde) { %><br><small class="suave"><%= soles(e.precio_mayor) %> desde <%= e.mayor_desde %></small><% } %></td>
+          <td class="num"><%= e.cantidad_total %></td>
+          <td class="num"><span class="chip <%= libresHoy[e.id] > 0 ? 'chip-ok' : 'chip-no' %>"><%= libresHoy[e.id] ?? 0 %></span></td>
+          <td>
+            <form method="post" action="/admin/equipos/<%= e.id %>/estado" data-auto>
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <select name="estado" class="estado-select" aria-label="Estado de <%= e.nombre %>">
+                <% [['operativo', 'Operativo'], ['mantenimiento', 'En mantenimiento'], ['baja', 'De baja']].forEach(([v, t]) => { %><option value="<%= v %>" <%= e.estado === v ? 'selected' : '' %>><%= t %></option><% }) %>
+              </select>
+            </form>
+          </td>
+          <td><button type="button" class="interruptor" role="switch" aria-checked="<%= e.publicado %>" aria-label="Publicar <%= e.nombre %>" data-alternar="/admin/equipos/<%= e.id %>/publicado"></button></td>
+          <td class="acciones" style="flex-wrap:nowrap">
+            <a class="btn-icono" href="/admin/equipos/<%= e.id %>/editar" aria-label="Editar <%= e.nombre %>"><i class="fa-solid fa-pen"></i></a>
+            <form method="post" action="/admin/equipos/<%= e.id %>/eliminar" data-confirmar="¿Eliminar «<%= e.nombre %>»? Esta acción no se puede deshacer.">
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <button class="btn-icono" aria-label="Eliminar <%= e.nombre %>"><i class="fa-regular fa-trash-can"></i></button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<p class="suave" style="font-size:.8rem;margin-top:.8rem">"Publicado" decide si aparece en el sitio. "En mantenimiento" lo muestra como no disponible y el recomendador no lo usa.</p>
+<%- include('_fin') %>

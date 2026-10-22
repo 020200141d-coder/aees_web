@@ -1,0 +1,133 @@
+<%#
+  publico/reserva.ejs — estado de una reserva y pago del adelanto.
+  Pasos visibles: reserva creada → adelanto → reunión de confirmación → evento.
+  Métodos de pago: Mercado Pago (si hay MP_ACCESS_TOKEN), Yape con n.º de operación
+  (lo verifica el admin) y, solo en desarrollo, un pago simulado.
+%>
+<%
+  const { soles, fechaLarga, ESTADOS_RESERVA, TIPOS_EVENTO } = util;
+  const porPagar = Math.max(0, Math.round((r.adelanto - (r.pagado || 0)) * 100) / 100);
+  const pagada = ['adelanto_pagado', 'confirmada', 'completada'].includes(r.estado);
+  const yapePendiente = pagos.find(p => p.metodo === 'yape' && p.estado === 'pendiente');
+  const wa = `Hola AeeS, tengo la reserva ${r.codigo} para el ${r.fecha_evento}.`;
+  const lineas = r.encuesta?.lineas || [];
+  const hitos = [
+    ['Reserva creada', `Equipos bloqueados${r.expira_en && r.estado === 'pendiente_pago' ? ` hasta el ${new Date(r.expira_en).toLocaleString('es-PE', { timeZone: 'America/Lima', dateStyle: 'medium', timeStyle: 'short' })}` : ''}`, true],
+    [`Adelanto del ${r.adelanto_pct}%`, pagada ? `Pagado: ${soles(r.pagado)}` : `Por pagar: ${soles(porPagar)}`, pagada],
+    ['Reunión de confirmación', r.reunion ? `${r.reunion.fecha} ${r.reunion.hora} · ${r.reunion.modalidad}` : 'Para cerrar detalles y que no haya cambios', ['confirmada', 'completada'].includes(r.estado)],
+    ['Tu evento', fechaLarga(r.fecha_evento), r.estado === 'completada']
+  ];
+  const actual = hitos.findIndex(h => !h[2]);
+%>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <div class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Reserva</span>
+      <h1><%= r.codigo %></h1>
+      <span class="estado-reserva estado-<%= r.estado %>"><%= ESTADOS_RESERVA[r.estado] %></span>
+    </header>
+    <%- include('../partials/flash') %>
+
+    <div class="dos-columnas">
+      <div style="display:grid;gap:1.4rem">
+        <section class="panel">
+          <h2 style="font-size:1.3rem;margin-bottom:.8rem">Tu evento</h2>
+          <div class="info-ruta" style="margin-bottom:1.2rem">
+            <div class="dato"><small>Fecha</small><b><%= fechaLarga(r.fecha_evento) %></b></div>
+            <div class="dato"><small>Hora y duración</small><b><%= r.hora_inicio || 'por definir' %> · <%= r.horas %> h</b></div>
+            <div class="dato"><small>Tipo</small><b><%= TIPOS_EVENTO[r.tipo_evento]?.label || 'Evento' %><%= r.personas ? ` · ${r.personas} pers.` : '' %></b></div>
+            <div class="dato"><small>Lugar</small><b><%= (r.lugar || '').split(',').slice(0, 2).join(',') %></b></div>
+          </div>
+          <div class="lineas">
+            <% lineas.forEach(l => { %>
+              <div class="linea"><div><b><%= l.tipo === 'adicional' ? '+ ' : '' %><%= l.nombre %></b><% if (l.detalle) { %><small><%= l.detalle.join(' · ') %></small><% } else if (l.tipo === 'equipo') { %><small><%= l.cantidad %> × <%= soles(l.precio_unit) %></small><% } %></div><span></span><span class="precio"><%= soles(l.subtotal) %></span></div>
+            <% }) %>
+          </div>
+          <div class="resumen-precio" style="margin-top:1rem">
+            <div><span>Equipos</span><span><%= soles(r.subtotal) %></span></div>
+            <div><span>Técnico</span><span><%= soles(r.tecnico) %></span></div>
+            <div><span>Transporte <%= r.vehiculo ? `· ${r.vehiculo}` : '' %><%= r.distancia_km ? ` · ${r.distancia_km} km` : '' %></span><span><%= soles(r.transporte) %></span></div>
+            <% if (Number(r.descuento)) { %><div style="color:var(--disponible)"><span>Descuento<%= r.promo_codigo ? ` (${r.promo_codigo})` : '' %></span><span>− <%= soles(r.descuento) %></span></div><% } %>
+            <div class="total"><span>Total</span><b><%= soles(r.total) %></b></div>
+            <div class="adelanto"><span>Adelanto (<%= r.adelanto_pct %>%)</span><span><%= soles(r.adelanto) %></span></div>
+          </div>
+          <% if (r.explicacion) { %><div class="explicacion" style="margin-top:1.2rem"><p><%= r.explicacion %></p></div><% } %>
+        </section>
+      </div>
+
+      <aside style="display:grid;gap:1.4rem">
+        <section class="panel">
+          <h2 style="font-size:1.2rem;margin-bottom:.6rem">Progreso</h2>
+          <div class="linea-tiempo">
+            <% hitos.forEach(([titulo, detalle, hecho], i) => { %>
+              <div class="hito <%= hecho ? 'hecho' : i === actual ? 'actual' : '' %>"><i class="fa-solid <%= hecho ? 'fa-check' : 'fa-circle' %>"></i><div><b><%= titulo %></b><small><%= detalle %></small></div></div>
+            <% }) %>
+          </div>
+        </section>
+
+        <% if (r.estado === 'pendiente_pago') { %>
+          <section class="panel">
+            <h2 style="font-size:1.2rem;margin-bottom:.4rem">Paga el adelanto: <span class="texto-acento"><%= soles(porPagar) %></span></h2>
+            <p class="suave" style="font-size:.88rem;margin-bottom:1rem">Elige cómo pagar. Con el adelanto tu fecha y tus equipos quedan separados.</p>
+            <div class="metodos">
+              <div class="metodo">
+                <h3><i class="fa-solid fa-mobile-screen" style="color:#c77dff"></i> Yape</h3>
+                <p>Yapea <b><%= soles(porPagar) %></b> al número de abajo (a nombre de <%= negocio.yape?.titular %>) y escribe el número de operación que te muestra Yape.</p>
+                <% if (negocio.yape?.qr_url) { %><img src="<%= negocio.yape.qr_url %>" alt="QR de Yape" style="width:160px;border-radius:12px;margin-bottom:.8rem"><% } %>
+                <p class="yape-num"><%= (negocio.yape?.numero || '').replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3') %></p>
+                <% if (yapePendiente) { %>
+                  <div class="aviso aviso-ok"><i class="fa-solid fa-hourglass-half"></i>Operación <%= yapePendiente.referencia %> recibida. La estamos verificando.</div>
+                <% } else { %>
+                  <form method="post" action="/pagos/<%= r.codigo %>/yape" class="fila-form">
+                    <input type="hidden" name="_csrf" value="<%= csrf %>">
+                    <input name="operacion" inputmode="numeric" maxlength="12" placeholder="N.º de operación" required aria-label="Número de operación de Yape">
+                    <button class="btn btn-primario btn-sm">Informar pago</button>
+                  </form>
+                <% } %>
+              </div>
+              <% if (mpActivo) { %>
+                <div class="metodo">
+                  <h3><i class="fa-regular fa-credit-card" style="color:#00b1ea"></i> Tarjeta (Mercado Pago)</h3>
+                  <p>Pago seguro en la página de Mercado Pago. Se confirma automáticamente.</p>
+                  <form method="post" action="/pagos/<%= r.codigo %>/mercadopago"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-primario btn-bloque">Pagar <%= soles(porPagar) %></button></form>
+                </div>
+              <% } %>
+              <% if (simulado) { %>
+                <div class="metodo" style="border-style:dashed">
+                  <h3><i class="fa-solid fa-flask"></i> Pago simulado (solo desarrollo)</h3>
+                  <p>Para probar el flujo sin cuentas reales. No existe en producción.</p>
+                  <form method="post" action="/pagos/<%= r.codigo %>/simular"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-bloque">Simular pago aprobado</button></form>
+                </div>
+              <% } %>
+            </div>
+          </section>
+        <% } %>
+
+        <% if (pagada && r.estado !== 'completada') { %>
+          <section class="panel">
+            <h2 style="font-size:1.2rem;margin-bottom:.4rem">Reunión de confirmación</h2>
+            <p class="suave" style="font-size:.88rem;margin-bottom:1rem">Revisamos juntos el montaje, horarios y cualquier detalle para que no haya cambios el día del evento.</p>
+            <% if (r.reunion) { %><div class="aviso aviso-ok" style="margin-bottom:1rem"><i class="fa-solid fa-calendar-check"></i>Solicitada: <%= r.reunion.fecha %> a las <%= r.reunion.hora %> (<%= r.reunion.modalidad %>).</div><% } %>
+            <form method="post" action="/reservas/<%= r.codigo %>/reunion" style="display:grid;gap:.8rem">
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <div class="dos-campos">
+                <label class="campo-simple">Fecha<input type="date" name="fecha" min="<%= hoy %>" max="<%= r.fecha_evento %>" required></label>
+                <label class="campo-simple">Hora<input type="time" name="hora" min="08:00" max="20:00" required></label>
+              </div>
+              <label class="campo-simple">Modalidad
+                <select name="modalidad"><option value="videollamada">Videollamada por WhatsApp</option><option value="llamada">Llamada</option><option value="presencial">Presencial / visita al lugar</option></select>
+              </label>
+              <button class="btn btn-primario btn-sm"><%= r.reunion ? 'Cambiar horario' : 'Agendar reunión' %></button>
+            </form>
+          </section>
+        <% } %>
+
+        <a class="btn btn-wa btn-bloque" target="_blank" rel="noopener" href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent(wa) %>"><i class="fa-brands fa-whatsapp"></i> Escribir sobre esta reserva</a>
+      </aside>
+    </div>
+  </div>
+</main>
+<%- include('../partials/footer') %>

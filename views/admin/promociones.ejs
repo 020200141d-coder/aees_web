@@ -1,0 +1,44 @@
+<%# admin/promociones.ejs — códigos de descuento (lista + formulario en la misma página). %>
+<% const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Promociones</h1><p>Códigos que el cliente escribe en "Mi evento". No se suman con el descuento de cliente frecuente: se aplica el mayor.</p></div></header>
+<div class="rejilla rejilla-2">
+  <div class="tabla-caja">
+    <table class="tabla">
+      <thead><tr><th>Código</th><th>Descripción</th><th class="num">%</th><th>Condición</th><th>Vence</th><th>Activo</th><th></th></tr></thead>
+      <tbody>
+        <% promociones.forEach(x => { %>
+          <tr>
+            <td><b><%= x.codigo %></b></td><td><small><%= x.descripcion %></small></td><td class="num"><%= x.porcentaje %>%</td>
+            <td><small><%= x.solo_frecuentes ? 'Solo frecuentes' : 'Todos' %></small></td><td><small><%= x.vence || '—' %></small></td>
+            <td><span class="chip <%= x.activo ? 'chip-ok' : 'chip-no' %>"><%= x.activo ? 'Sí' : 'No' %></span></td>
+            <td class="acciones" style="flex-wrap:nowrap">
+              <a class="btn-icono" href="/admin/promociones/<%= x.id %>/editar" aria-label="Editar"><i class="fa-solid fa-pen"></i></a>
+              <form method="post" action="/admin/promociones/<%= x.id %>/eliminar" data-confirmar="¿Eliminar el código <%= x.codigo %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="/admin/promociones" class="tarjeta" novalidate>
+    <h2><%= editando ? 'Editar código' : 'Nuevo código' %></h2>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <% if (editando) { %><input type="hidden" name="id" value="<%= editando %>"><% } %>
+    <div class="form-rejilla">
+      <label class="campo-simple<%= errores.codigo ? ' error' : '' %>">Código<input name="codigo" value="<%= p.codigo || '' %>" maxlength="20" style="text-transform:uppercase" required><%- err('codigo') %></label>
+      <label class="campo-simple<%= errores.porcentaje ? ' error' : '' %>">Descuento (%)<input name="porcentaje" type="number" min="1" max="50" value="<%= p.porcentaje || '' %>" required><%- err('porcentaje') %></label>
+      <label class="campo-simple ancho">Descripción<input name="descripcion" value="<%= p.descripcion || '' %>" maxlength="200"></label>
+      <label class="campo-simple">Vence (opcional)<input name="vence" type="date" value="<%= p.vence || '' %>"></label>
+      <div class="casillas ancho">
+        <label class="casilla"><input type="checkbox" name="solo_frecuentes" <%= p.solo_frecuentes ? 'checked' : '' %>> Solo clientes frecuentes</label>
+        <label class="casilla"><input type="checkbox" name="activo" <%= p.activo ? 'checked' : '' %>> Activo</label>
+      </div>
+    </div>
+    <div class="form-pie">
+      <% if (editando) { %><a href="/admin/promociones" class="btn btn-ghost btn-sm">Cancelar</a><% } %>
+      <button class="btn btn-primario btn-sm">Guardar</button>
+    </div>
+  </form>
+</div>
+<%- include('_fin') %>

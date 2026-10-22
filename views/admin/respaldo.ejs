@@ -1,0 +1,20 @@
+<%#
+  admin/respaldo.ejs — descargar y restaurar TODOS los datos en un archivo JSON.
+  Restaurar: admin.js lee el archivo en el navegador y lo envía como JSON a
+  POST /admin/respaldo/restaurar (así no hace falta una librería de subida de archivos).
+%>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Respaldo</h1><p>Base de datos actual: <b><%= motor === 'supabase' ? 'Supabase (PostgreSQL)' : 'archivo local (data/db.local.json)' %></b></p></div></header>
+<div class="rejilla rejilla-2">
+  <section class="tarjeta">
+    <h2><i class="fa-solid fa-download"></i> Descargar respaldo</h2>
+    <p class="suave" style="margin-bottom:1rem">Un archivo con equipos, combos, reservas, pagos, clientes, mensajes y ajustes. Guárdalo cada semana o antes de cambios grandes.</p>
+    <a href="/admin/respaldo/descargar" class="btn btn-primario btn-sm"><i class="fa-solid fa-file-arrow-down"></i> Descargar respaldo</a>
+  </section>
+  <section class="tarjeta">
+    <h2><i class="fa-solid fa-upload"></i> Restaurar</h2>
+    <p class="suave" style="margin-bottom:1rem"><% if (motor === 'supabase') { %>Actualiza o agrega los registros del archivo (no borra los que no estén en él).<% } else { %>Reemplaza los datos actuales por los del archivo.<% } %></p>
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i class="fa-solid fa-file-import"></i> Elegir archivo .json<input type="file" accept="application/json,.json" hidden id="archivo-respaldo"></label>
+  </section>
+</div>
+<%- include('_fin') %>

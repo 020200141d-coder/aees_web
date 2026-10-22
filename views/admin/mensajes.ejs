@@ -1,0 +1,23 @@
+<%# admin/mensajes.ejs — cotizaciones del formulario y solicitudes de "fecha ocupada". %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Mensajes</h1><p>Cotizaciones del formulario y pedidos de reunión por fechas ocupadas.</p></div></header>
+<div class="lista-agenda">
+  <% if (!mensajes.length) { %><div class="tarjeta vacio"><i class="fa-regular fa-envelope-open"></i><p>Sin mensajes por ahora.</p></div><% } %>
+  <% mensajes.forEach(m => { const tel = String(m.telefono || '').replace(/\D/g, '').slice(-9); %>
+    <article class="mensaje<%= m.leido ? '' : ' no-leido' %><%= m.tipo === 'fecha_ocupada' ? ' ocupada' : '' %>">
+      <b><%= m.tipo === 'fecha_ocupada' ? '📅 Fecha ocupada' : '✉️ Cotización' %> · <%= m.nombre %> <% if (!m.leido) { %><span class="chip chip-oro">nuevo</span><% } %></b>
+      <small class="suave"><%= new Date(m.creado_en).toLocaleString('es-PE', { timeZone: 'America/Lima' }) %> · <%= m.telefono %><%= m.fecha_evento ? ` · evento ${m.fecha_evento}` : '' %></small>
+      <p style="white-space:pre-line"><%= m.mensaje %></p>
+      <% if (m.tipo === 'fecha_ocupada' && m.datos) { %>
+        <small><b>Pedido:</b> <%= m.datos.resumen %></small>
+        <small><b>No alcanza:</b> <%= (m.datos.faltan || []).map(f => `${f.nombre}: faltan ${f.pedido - f.libre}`).join(', ') || '—' %></small>
+      <% } %>
+      <div class="mensaje-pie">
+        <% if (tel.length === 9) { %><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= tel %>?text=<%= encodeURIComponent(`Hola ${m.nombre}, te escribe AeeS Acústico por tu consulta.`) %>"><i class="fa-brands fa-whatsapp"></i> Responder</a><% } %>
+        <form method="post" action="/admin/mensajes/<%= m.id %>/leido"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><%= m.leido ? 'Marcar no leído' : 'Marcar atendido' %></button></form>
+        <form method="post" action="/admin/mensajes/<%= m.id %>/eliminar" data-confirmar="¿Eliminar este mensaje?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-regular fa-trash-can"></i></button></form>
+      </div>
+    </article>
+  <% }) %>
+</div>
+<%- include('_fin') %>

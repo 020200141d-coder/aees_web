@@ -1,0 +1,33 @@
+<%# admin/reservas.ejs — todas las reservas con filtro por estado y búsqueda. %>
+<% const { soles, fechaLarga, ESTADOS_RESERVA } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Reservas</h1><p><%= reservas.length %> resultado(s)</p></div></header>
+<form class="barra-filtros" method="get">
+  <input type="search" name="q" value="<%= q %>" placeholder="Código, cliente, celular o lugar" aria-label="Buscar">
+  <select name="estado" onchange="this.form.submit()" aria-label="Estado">
+    <option value="">Todos los estados</option>
+    <% Object.entries(ESTADOS_RESERVA).forEach(([k, v]) => { %><option value="<%= k %>" <%= estado === k ? 'selected' : '' %>><%= v %></option><% }) %>
+  </select>
+  <button class="btn btn-ghost btn-sm">Buscar</button>
+</form>
+<div class="tabla-caja">
+  <table class="tabla">
+    <thead><tr><th>Código</th><th>Evento</th><th>Cliente</th><th>Lugar</th><th class="num">Total</th><th class="num">Pagado</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+      <% if (!reservas.length) { %><tr><td colspan="8" class="suave" style="text-align:center;padding:2rem">No hay reservas con ese filtro.</td></tr><% } %>
+      <% reservas.forEach(r => { %>
+        <tr>
+          <td><b><%= r.codigo %></b></td>
+          <td><%= fechaLarga(r.fecha_evento) %><br><small class="suave"><%= r.hora_inicio || '' %> · <%= r.horas %> h · <%= r.personas || '?' %> pers.</small></td>
+          <td><%= r.datos_cliente?.nombre %><br><small class="suave"><%= r.datos_cliente?.celular %></small></td>
+          <td><small><%= (r.lugar || '').split(',').slice(0, 2).join(',') %></small></td>
+          <td class="num"><%= soles(r.total) %></td>
+          <td class="num"><%= soles(r.pagado) %></td>
+          <td><span class="estado-reserva estado-<%= r.estado %>" style="font-size:.75rem"><%= ESTADOS_RESERVA[r.estado] %></span></td>
+          <td><a class="btn btn-ghost btn-sm" href="/admin/reservas/<%= r.codigo %>">Abrir</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('_fin') %>

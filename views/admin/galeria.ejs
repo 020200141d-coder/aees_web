@@ -1,0 +1,24 @@
+<%# admin/galeria.ejs — fotos de eventos realizados que se muestran en la portada (sección "Eventos realizados"). %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Galería de eventos</h1><p>Sube las fotos de tus montajes: aparecen en la portada con filtros y vista ampliada.</p></div>
+  <a href="/admin/galeria/nueva" class="btn btn-primario btn-sm"><i class="fa-solid fa-plus"></i> Nueva publicación</a>
+</header>
+<div class="grid-combos" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+  <% if (!publicaciones.length) { %><p class="suave">Aún no hay fotos.</p><% } %>
+  <% publicaciones.forEach(p => { %>
+    <article class="combo-card" style="<%= p.publicado ? '' : 'opacity:.55' %>">
+      <div class="combo-foto" style="height:160px"><img src="<%= p.imagen %>" alt="<%= p.titulo %>" loading="lazy"><span class="chip"><%= TIPOS_PUB[p.tipo] || p.tipo %></span></div>
+      <div class="combo-cuerpo">
+        <h3 style="font-size:1.05rem"><%= p.titulo %></h3>
+        <p style="font-size:.82rem"><%= p.texto %></p>
+        <div class="combo-acciones" style="align-items:center">
+          <button type="button" class="interruptor" role="switch" aria-checked="<%= p.publicado %>" aria-label="Publicar <%= p.titulo %>" data-alternar="/admin/galeria/<%= p.id %>/publicado"></button>
+          <a class="btn-icono" href="/admin/galeria/<%= p.id %>/editar" aria-label="Editar"><i class="fa-solid fa-pen"></i></a>
+          <form method="post" action="/admin/galeria/<%= p.id %>/eliminar" data-confirmar="¿Quitar «<%= p.titulo %>» de la galería?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form>
+        </div>
+      </div>
+    </article>
+  <% }) %>
+</div>
+<%- include('_fin') %>

@@ -1,0 +1,145 @@
+<%#
+  publico/asistente.ejs — "Arma tu evento": encuesta guiada + mapa + recomendación.
+  Toda la lógica vive en public/js/asistente.js; aquí solo está la estructura.
+  Pasos: 0 cuéntanos (texto libre con IA) → 1 tipo → 2 invitados y lugar → 3 fecha y horas
+         → 4 extras → 5 ubicación en el mapa → 6 resultados.
+%>
+<% const { TIPOS_EVENTO } = util; %>
+<%- include('../partials/head', { extraHead: '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">' }) %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+
+<main class="pagina">
+  <div class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Asistente AeeS</span>
+      <h1>Arma tu evento <span class="texto-acento">en 2 minutos</span></h1>
+      <p>Responde lo que sepas; lo demás lo calculamos nosotros. Al final verás tres opciones con precio, transporte y el clima de tu fecha.</p>
+    </header>
+
+    <div class="asistente">
+      <nav class="pasos" aria-label="Pasos">
+        <% ['Cuéntanos', 'Tipo de evento', 'Invitados y lugar', 'Fecha y horas', 'Extras', 'Ubicación', 'Tu propuesta'].forEach((p, i) => { %>
+          <button class="paso-item<%= i === 0 ? ' activo' : '' %>" data-ir-paso="<%= i %>" type="button"><span><%= i + 1 %></span><b><%= p %></b></button>
+        <% }) %>
+      </nav>
+
+      <form class="panel" id="form-asistente" novalidate>
+        <!-- 0. Texto libre -->
+        <section class="paso activo" data-paso="0">
+          <h2>¿Qué estás celebrando?</h2>
+          <p class="suave">Escríbelo como se lo contarías a un amigo. Nuestra IA entiende el tipo de evento, invitados, lugar y lo que necesitas.</p>
+          <div class="texto-libre">
+            <label class="oculto-accesible" for="texto-libre">Describe tu evento</label>
+            <textarea id="texto-libre" maxlength="1500" placeholder="Ej.: Quiero sonido para la boda de mi hijo, unos 100 invitados con orquesta y DJ, en un local de Urubamba el 20 de diciembre."></textarea>
+          </div>
+          <div class="ejemplos" aria-label="Ejemplos">
+            <button type="button" data-ejemplo="Cumpleaños de 100 personas en el Valle Sagrado, al aire libre, unas 5 horas.">🎂 Cumpleaños en el Valle</button>
+            <button type="button" data-ejemplo="Boda de 200 invitados en Cusco con orquesta y DJ, en salón.">💍 Boda con orquesta</button>
+            <button type="button" data-ejemplo="Fiesta electrónica de 300 personas, 8 horas, en un campo de Calca.">🎧 Fiesta electrónica</button>
+            <button type="button" data-ejemplo="Conferencia corporativa para 120 personas con presentación en pantalla.">🎤 Conferencia</button>
+          </div>
+          <div class="paso-acciones">
+            <button type="button" class="btn btn-ghost" data-siguiente>Prefiero responder paso a paso</button>
+            <button type="button" class="btn btn-primario magnetico" id="btn-interpretar">
+              <span class="btn-texto"><i class="fa-solid fa-wand-magic-sparkles"></i> Entender mi pedido</span>
+              <span class="btn-cargando"><i class="fa-solid fa-circle-notch fa-spin"></i> Leyendo…</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- 1. Tipo -->
+        <section class="paso" data-paso="1">
+          <h2>Tipo de evento</h2>
+          <p class="suave">Cambia el diseño del sonido: una fiesta necesita graves y potencia; una conferencia, que se entienda cada palabra.</p>
+          <div class="opciones-grid">
+            <% Object.entries(TIPOS_EVENTO).forEach(([id, t]) => { %>
+              <label class="opcion"><input type="radio" name="tipo_evento" value="<%= id %>"><i class="<%= t.icono %>"></i><%= t.label %></label>
+            <% }) %>
+          </div>
+          <div class="campos" style="margin-top:1.4rem">
+            <label class="campo-simple">Tu nombre (opcional, para personalizar la propuesta)
+              <input type="text" name="nombre" maxlength="40" autocomplete="given-name">
+            </label>
+          </div>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
+        </section>
+
+        <!-- 2. Invitados y espacio -->
+        <section class="paso" data-paso="2">
+          <h2>¿Cuántos invitados y dónde?</h2>
+          <div class="rango">
+            <label for="personas" class="suave">Invitados aproximados</label>
+            <span class="rango-valor"><output id="personas-valor">100</output> <small class="suave" style="font-size:1rem">personas</small></span>
+            <input type="range" id="personas" name="personas" min="10" max="800" step="10" value="100">
+          </div>
+          <div class="opciones-grid">
+            <label class="opcion"><input type="radio" name="espacio" value="interior" checked><i class="fa-solid fa-building"></i>Salón / local cerrado</label>
+            <label class="opcion"><input type="radio" name="espacio" value="exterior"><i class="fa-solid fa-tree"></i>Aire libre / jardín</label>
+          </div>
+          <label class="casilla" style="margin-top:1.2rem"><input type="checkbox" name="sin_electricidad"> El lugar no tiene electricidad confiable (necesito generador)</label>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
+        </section>
+
+        <!-- 3. Fecha y horas -->
+        <section class="paso" data-paso="3">
+          <h2>¿Cuándo y cuánto dura?</h2>
+          <p class="suave">Con la fecha revisamos la disponibilidad real de cada equipo y el pronóstico del clima.</p>
+          <div class="campos">
+            <label class="campo-simple">Fecha del evento<input type="date" name="fecha" min="<%= hoy %>"></label>
+            <label class="campo-simple">Hora de inicio<input type="time" name="hora_inicio" value="19:00"></label>
+            <label class="campo-simple">Duración (horas)<input type="number" name="horas" min="1" max="24" placeholder="Automático según el evento"></label>
+          </div>
+          <p class="suave" style="margin-top:.8rem;font-size:.88rem"><i class="fa-regular fa-clock"></i> Se cobra por jornadas de 4 horas. Una fiesta electrónica suele durar 8 horas (2 jornadas).</p>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
+        </section>
+
+        <!-- 4. Extras -->
+        <section class="paso" data-paso="4">
+          <h2>¿Qué habrá en tu evento?</h2>
+          <p class="suave">Marca todo lo que aplique.</p>
+          <div class="opciones-grid">
+            <label class="opcion"><input type="checkbox" name="orquesta"><i class="fa-solid fa-music"></i>Orquesta</label>
+            <label class="opcion"><input type="checkbox" name="banda"><i class="fa-solid fa-guitar"></i>Banda / grupo en vivo</label>
+            <label class="opcion"><input type="checkbox" name="dj"><i class="fa-solid fa-compact-disc"></i>DJ</label>
+            <label class="opcion"><input type="checkbox" name="proyeccion"><i class="fa-solid fa-tv"></i>Pantalla / videos</label>
+            <label class="opcion"><input type="checkbox" name="luces" checked><i class="fa-solid fa-lightbulb"></i>Luces de ambiente</label>
+          </div>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
+        </section>
+
+        <!-- 5. Ubicación -->
+        <section class="paso" data-paso="5">
+          <h2>¿Dónde es el evento?</h2>
+          <p class="suave">Busca el lugar o toca el mapa para poner el pin exacto. Calculamos la ruta desde nuestro almacén y en qué vehículo entra todo.</p>
+          <div class="mapa-caja">
+            <div class="buscador-lugar">
+              <label class="oculto-accesible" for="buscar-lugar">Buscar lugar</label>
+              <input id="buscar-lugar" type="search" placeholder="Ej.: Urubamba, Hacienda Huayoccari, Plaza de Armas Cusco" autocomplete="off">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-buscar"><i class="fa-solid fa-magnifying-glass"></i> <span class="btn-texto-largo">Buscar</span></button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-mi-ubicacion" title="Usar mi ubicación"><i class="fa-solid fa-location-crosshairs"></i></button>
+            </div>
+            <div class="sugerencias" id="sugerencias"></div>
+            <div id="mapa" role="application" aria-label="Mapa para elegir el lugar del evento"></div>
+            <div class="info-ruta" id="info-ruta" hidden></div>
+          </div>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button>
+            <button type="button" class="btn btn-primario magnetico" id="btn-recomendar"><i class="fa-solid fa-wand-magic-sparkles"></i> Ver mi propuesta</button>
+          </div>
+        </section>
+
+        <!-- 6. Resultados -->
+        <section class="paso" data-paso="6">
+          <div id="resultados"></div>
+          <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Ajustar respuestas</button>
+            <a class="btn btn-wa" id="wa-propuesta" target="_blank" rel="noopener" href="https://wa.me/<%= negocio.whatsapp %>"><i class="fa-brands fa-whatsapp"></i> Hablar con un asesor</a>
+          </div>
+        </section>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script type="application/json" id="datos-asistente"><%- JSON.stringify({ almacen: negocio.almacen, whatsapp: negocio.whatsapp }).replace(/</g, '\\u003c') %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<%- include('../partials/footer', { scripts: ['/js/asistente.js'] }) %>

@@ -1,0 +1,104 @@
+<%#
+  publico/mi-evento.ejs — resumen de "Mi evento" y formulario de reserva.
+  El contenido lo arma public/js/mi-evento.js: lee el borrador (localStorage), pide el
+  precio real a POST /api/cotizar y, al reservar, envía POST /api/reservas.
+  Para reservar hay que haber ingresado (Google o celular); si no, se ofrece aquí mismo.
+%>
+<%- include('../partials/head', { extraHead: '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">' }) %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+
+<main class="pagina">
+  <div class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Mi evento</span>
+      <h1>Revisa y <span class="texto-acento">separa tu fecha</span></h1>
+      <p>El precio se calcula con la disponibilidad real del día. Para separar pagas solo el adelanto; el resto se coordina en la reunión de confirmación.</p>
+    </header>
+
+    <div id="evento-vacio" class="panel vacio" hidden>
+      <i class="fa-solid fa-calendar-plus"></i>
+      <p>Tu evento todavía no tiene equipos.</p>
+      <div class="hero-acciones" style="justify-content:center">
+        <a href="/asistente" class="btn btn-primario"><i class="fa-solid fa-wand-magic-sparkles"></i> Usar el asistente</a>
+        <a href="/#combos" class="btn btn-ghost">Ver combos</a>
+        <a href="/#equipos" class="btn btn-ghost">Ver equipos</a>
+      </div>
+    </div>
+
+    <div class="dos-columnas" id="evento-contenido" hidden>
+      <div style="display:grid;gap:1.4rem">
+        <section class="panel">
+          <h2 style="font-size:1.4rem;margin-bottom:1rem">Equipos</h2>
+          <div class="lineas" id="lineas"></div>
+          <div id="adicionales" style="margin-top:1rem"></div>
+          <div class="hero-acciones" style="margin-top:1.2rem">
+            <a href="/#equipos" class="btn btn-ghost btn-sm"><i class="fa-solid fa-plus"></i> Agregar equipos</a>
+            <button type="button" class="btn btn-ghost btn-sm" id="vaciar"><i class="fa-regular fa-trash-can"></i> Vaciar</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2 style="font-size:1.4rem;margin-bottom:1rem">Datos del evento</h2>
+          <div class="campos">
+            <label class="campo-simple">Fecha<input type="date" id="ev-fecha" min="<%= hoy %>"></label>
+            <label class="campo-simple">Hora de inicio<input type="time" id="ev-hora"></label>
+            <label class="campo-simple">Horas<input type="number" id="ev-horas" min="1" max="24"></label>
+            <label class="campo-simple">Invitados<input type="number" id="ev-personas" min="1" max="5000"></label>
+          </div>
+          <label class="casilla" style="margin-top:1rem"><input type="checkbox" id="ev-tecnico" checked> Incluir técnico que monta y opera durante el evento</label>
+          <div style="margin-top:1.2rem">
+            <p class="suave" style="font-size:.9rem;margin-bottom:.6rem"><i class="fa-solid fa-location-dot"></i> Lugar: <b id="ev-lugar-texto">sin marcar</b></p>
+            <div class="buscador-lugar">
+              <input id="buscar-lugar" type="search" placeholder="Busca el lugar o toca el mapa" autocomplete="off" aria-label="Buscar lugar">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-buscar"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+            <div class="sugerencias" id="sugerencias" style="margin:.5rem 0"></div>
+            <div id="mapa" class="mapa" style="height:280px"></div>
+          </div>
+        </section>
+      </div>
+
+      <aside style="display:grid;gap:1.4rem;position:sticky;top:calc(var(--header-h) + 20px)">
+        <section class="panel">
+          <h2 style="font-size:1.3rem;margin-bottom:1rem">Resumen</h2>
+          <div id="faltan"></div>
+          <div class="resumen-precio" id="resumen"><p class="suave">Calculando…</p></div>
+          <div class="campos" style="margin-top:1rem;grid-template-columns:1fr auto;align-items:end">
+            <label class="campo-simple">Código de promoción<input type="text" id="promo" maxlength="20" style="text-transform:uppercase"></label>
+            <button type="button" class="btn btn-ghost btn-sm" id="aplicar-promo">Aplicar</button>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-reserva">
+          <% if (!usuario) { %>
+            <h2 style="font-size:1.3rem;margin-bottom:.5rem">Para separar la fecha</h2>
+            <p class="suave" style="margin-bottom:1rem">Ingresa en un paso. Tu evento se queda guardado.</p>
+            <a href="/cuenta/ingresar?volver=/mi-evento" class="btn btn-primario btn-bloque"><i class="fa-brands fa-google"></i> Ingresar con Google o celular</a>
+          <% } else { %>
+            <h2 style="font-size:1.3rem;margin-bottom:1rem">Tus datos para la reserva</h2>
+            <form id="form-reserva" novalidate style="display:grid;gap:.9rem">
+              <label class="campo-simple">Nombre completo<input name="nombre" value="<%= usuario.nombre %>" maxlength="80" autocomplete="name"><span class="campo-error"></span></label>
+              <div class="dos-campos">
+                <label class="campo-simple">DNI<input name="dni" value="<%= usuario.dni || '' %>" inputmode="numeric" maxlength="8"><span class="campo-error"></span></label>
+                <label class="campo-simple">Celular<input name="celular" value="<%= usuario.celular || '' %>" inputmode="tel" maxlength="12"><span class="campo-error"></span></label>
+              </div>
+              <label class="campo-simple">Correo (opcional)<input name="correo" type="email" value="<%= usuario.email || '' %>" maxlength="120"><span class="campo-error"></span></label>
+              <label class="casilla"><input type="checkbox" name="acepta"> Acepto que AeeS Acústico use mis datos solo para gestionar esta reserva (Ley 29733 de Protección de Datos Personales).</label>
+              <span class="campo-error" data-error="acepta" style="color:var(--no-disponible);font-size:.8rem"></span>
+              <button type="submit" class="btn btn-primario btn-bloque magnetico">
+                <span class="btn-texto"><i class="fa-solid fa-lock"></i> Reservar y pagar adelanto</span>
+                <span class="btn-cargando"><i class="fa-solid fa-circle-notch fa-spin"></i> Reservando…</span>
+              </button>
+            </form>
+          <% } %>
+          <a class="btn btn-wa btn-bloque" id="wa-evento" style="margin-top:.8rem" target="_blank" rel="noopener" href="https://wa.me/<%= negocio.whatsapp %>"><i class="fa-brands fa-whatsapp"></i> Prefiero coordinar por WhatsApp</a>
+        </section>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<script type="application/json" id="datos-evento"><%- JSON.stringify({ almacen: negocio.almacen, whatsapp: negocio.whatsapp, conSesion: Boolean(usuario), usuario: usuario ? { nombre: usuario.nombre, celular: usuario.celular || '' } : null }).replace(/</g, '\\u003c') %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<%- include('../partials/footer', { scripts: ['/js/mi-evento.js'] }) %>

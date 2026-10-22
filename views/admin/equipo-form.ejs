@@ -1,0 +1,72 @@
+<%#
+  admin/equipo-form.ejs — crear / editar un equipo.
+  Las medidas (volumen, peso, largo) las usa el cálculo de transporte;
+  el rol lo usa el recomendador (top, sub, line_array, consola_digital, par_led...).
+%>
+<% const { CATEGORIAS } = util; const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; const v = k => e[k] ?? ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1><%= nuevo ? 'Nuevo equipo' : `Editar ${e.nombre}` %></h1><p>Los cambios se ven al instante en el sitio público.</p></div>
+  <a href="/admin/equipos" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+</header>
+<% if (Object.keys(errores).length) { %><div class="flash flash-error" role="alert">Revisa los campos marcados.</div><% } %>
+
+<form method="post" action="<%= nuevo ? '/admin/equipos' : `/admin/equipos/${e.id}` %>" class="tarjeta" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2><i class="fa-solid fa-tag"></i> Datos principales</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple<%= errores.codigo ? ' error' : '' %>">Código<input name="codigo" value="<%= v('codigo') %>" <%= nuevo ? '' : 'readonly' %> maxlength="30" required><small class="ayuda"><%= nuevo ? 'Ej. EON615-2. No se puede cambiar después.' : 'No se puede cambiar.' %></small><%- err('codigo') %></label>
+    <label class="campo-simple<%= errores.nombre ? ' error' : '' %>">Nombre<input name="nombre" value="<%= v('nombre') %>" maxlength="120" required><%- err('nombre') %></label>
+    <label class="campo-simple">Marca<input name="marca" value="<%= v('marca') %>" maxlength="60"></label>
+    <label class="campo-simple">Modelo<input name="modelo" value="<%= v('modelo') %>" maxlength="60"></label>
+    <label class="campo-simple<%= errores.categoria ? ' error' : '' %>">Categoría
+      <select name="categoria"><% Object.entries(CATEGORIAS).forEach(([id, c]) => { %><option value="<%= id %>" <%= e.categoria === id ? 'selected' : '' %>><%= c.label %></option><% }) %></select><%- err('categoria') %>
+    </label>
+    <label class="campo-simple<%= errores.rol ? ' error' : '' %>">Rol técnico
+      <input name="rol" value="<%= v('rol') %>" list="roles" maxlength="30" required><datalist id="roles"><% roles.forEach(r => { %><option value="<%= r %>"><% }) %></datalist>
+      <small class="ayuda">Lo usa el asistente para elegir equipos (top, sub, line_array, par_led…).</small><%- err('rol') %>
+    </label>
+    <label class="campo-simple ancho">Descripción para el cliente<textarea name="descripcion" maxlength="1500"><%= v('descripcion') %></textarea></label>
+  </div>
+
+  <h2 style="margin-top:1.6rem"><i class="fa-solid fa-coins"></i> Precio y stock</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple<%= errores.precio ? ' error' : '' %>">Precio por jornada (S/)<input name="precio" type="number" step="0.5" min="0" value="<%= v('precio') %>" required><%- err('precio') %></label>
+    <label class="campo-simple<%= errores.cantidad_total ? ' error' : '' %>">Cantidad en stock<input name="cantidad_total" type="number" min="0" value="<%= v('cantidad_total') %>" required><%- err('cantidad_total') %></label>
+    <label class="campo-simple<%= errores.precio_mayor ? ' error' : '' %>">Precio por cantidad (S/ c/u)<input name="precio_mayor" type="number" step="0.5" min="0" value="<%= v('precio_mayor') %>"><small class="ayuda">Opcional. Ej. tachos: 20 desde 13 unidades.</small><%- err('precio_mayor') %></label>
+    <label class="campo-simple<%= errores.mayor_desde ? ' error' : '' %>">…desde cuántas unidades<input name="mayor_desde" type="number" min="2" value="<%= v('mayor_desde') %>"><%- err('mayor_desde') %></label>
+    <label class="campo-simple">Ajuste si el evento no lleva DMX (S/)<input name="ajuste_sin_dmx" type="number" step="0.5" value="<%= v('ajuste_sin_dmx') || 0 %>"><small class="ayuda">Ej. −5 en tachos sin controlador DMX.</small></label>
+    <label class="campo-simple<%= errores.precio_adicional ? ' error' : '' %>">Precio como adicional de combo (S/)<input name="precio_adicional" type="number" step="0.5" min="0" value="<%= v('precio_adicional') %>"><small class="ayuda">Referencia para armar ofertas (ej. EON615: 50 c/u).</small><%- err('precio_adicional') %></label>
+    <label class="campo-simple">Estado
+      <select name="estado"><% [['operativo', 'Operativo'], ['mantenimiento', 'En mantenimiento'], ['baja', 'De baja']].forEach(([val, t]) => { %><option value="<%= val %>" <%= e.estado === val ? 'selected' : '' %>><%= t %></option><% }) %></select>
+    </label>
+    <label class="campo-simple">Orden en el catálogo<input name="orden" type="number" value="<%= v('orden') || 0 %>"></label>
+  </div>
+
+  <h2 style="margin-top:1.6rem"><i class="fa-solid fa-ruler-combined"></i> Ficha técnica y transporte</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Potencia (W)<input name="potencia_w" type="number" min="0" value="<%= v('potencia_w') %>"></label>
+    <label class="campo-simple">SPL máximo (dB)<input name="spl_db" type="number" min="0" value="<%= v('spl_db') %>"></label>
+    <label class="campo-simple">Cobertura aprox. (personas)<input name="cobertura_personas" type="number" min="0" value="<%= v('cobertura_personas') %>"></label>
+    <label class="campo-simple">Medidas (texto)<input name="dimensiones" value="<%= v('dimensiones') %>" maxlength="80" placeholder="71 × 44 × 36 cm"></label>
+    <label class="campo-simple<%= errores.volumen_l ? ' error' : '' %>">Volumen (litros)<input name="volumen_l" type="number" step="1" min="0" value="<%= v('volumen_l') %>"><small class="ayuda">largo × ancho × alto en cm ÷ 1000</small><%- err('volumen_l') %></label>
+    <label class="campo-simple">Peso (kg)<input name="peso_kg" type="number" step="0.5" min="0" value="<%= v('peso_kg') %>"></label>
+    <label class="campo-simple">Pieza más larga (cm)<input name="largo_cm" type="number" min="0" value="<%= v('largo_cm') %>"></label>
+  </div>
+
+  <h2 style="margin-top:1.6rem"><i class="fa-regular fa-image"></i> Foto y publicación</h2>
+  <div class="form-rejilla">
+    <%- include('_foto', { nombre: 'imagen', valor: e.imagen, error: errores.imagen }) %>
+    <label class="campo-simple">Fuente de la foto<input name="imagen_fuente" value="<%= v('imagen_fuente') %>" maxlength="120" placeholder="Foto propia / Unsplash ..."></label>
+    <div class="casillas ancho">
+      <label class="casilla"><input type="checkbox" name="publicado" <%= e.publicado ? 'checked' : '' %>> Publicado en el sitio</label>
+      <label class="casilla"><input type="checkbox" name="destacado" <%= e.destacado ? 'checked' : '' %>> Destacado</label>
+    </div>
+  </div>
+
+  <div class="form-pie">
+    <a href="/admin/equipos" class="btn btn-ghost btn-sm">Cancelar</a>
+    <button class="btn btn-primario btn-sm"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+  </div>
+</form>
+<%- include('_fin') %>

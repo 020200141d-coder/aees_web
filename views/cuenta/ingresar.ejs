@@ -1,0 +1,54 @@
+<%#
+  cuenta/ingresar.ejs — registro / ingreso del cliente en un solo paso.
+  • Google: botón oficial de Google Identity Services (solo si hay GOOGLE_CLIENT_ID).
+    El callback envía el token a POST /cuenta/google, que lo verifica con Google.
+  • Celular + PIN de 6 dígitos: POST /cuenta/celular. Si el celular es nuevo, se crea la cuenta.
+%>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <div class="contenedor ingreso">
+    <header class="pagina-titulo" style="text-align:center">
+      <span class="seccion-num">Tu cuenta</span>
+      <h1>Ingresa <span class="texto-acento">sin rodeos</span></h1>
+      <p style="margin:0 auto">Si es tu primera vez, se crea tu cuenta al instante. Solo pedimos DNI cuando reservas.</p>
+    </header>
+
+    <section class="panel">
+      <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
+
+      <% if (googleClientId) { %>
+        <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup"></div>
+        <div style="display:grid;justify-items:center"><div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black" data-size="large" data-text="continue_with" data-locale="es"></div></div>
+      <% } else { %>
+        <p class="suave" style="text-align:center;font-size:.88rem"><i class="fa-brands fa-google"></i> El ingreso con Google se activa al configurar <code>GOOGLE_CLIENT_ID</code>.</p>
+      <% } %>
+
+      <div class="separador">o con tu celular</div>
+
+      <form method="post" action="/cuenta/celular" style="display:grid;gap:.9rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input type="hidden" name="volver" value="<%= volver %>">
+        <label class="campo-simple">Celular<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" value="<%= datos.celular || '' %>" autocomplete="tel" required></label>
+        <label class="campo-simple">PIN de 6 dígitos<input name="pin" type="password" inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required></label>
+        <label class="campo-simple">Tu nombre <small>(solo la primera vez)</small><input name="nombre" maxlength="80" value="<%= datos.nombre || '' %>" autocomplete="name"></label>
+        <button class="btn btn-primario btn-bloque magnetico"><i class="fa-solid fa-right-to-bracket"></i> Ingresar o crear cuenta</button>
+      </form>
+      <p class="suave" style="font-size:.8rem;margin-top:1rem;text-align:center">¿Olvidaste tu PIN? Escríbenos por <a href="https://wa.me/<%= negocio.whatsapp %>" style="color:var(--primario)">WhatsApp</a> y lo restablecemos.</p>
+    </section>
+  </div>
+</main>
+
+<% if (googleClientId) { %>
+<script>
+  // Google llama a esta función con el "credential" (un JWT firmado por Google).
+  async function aeesGoogle(respuesta) {
+    const r = await aeesFetch('/cuenta/google', { method: 'POST', body: { credential: respuesta.credential, volver: <%- JSON.stringify(volver) %> } });
+    if (r.ok) window.location.href = r.volver;
+    else aeesAlerta({ icon: 'error', title: 'No pudimos ingresar', text: r.error });
+  }
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<% } %>
+<%- include('../partials/footer') %>

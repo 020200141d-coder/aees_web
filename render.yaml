@@ -1,0 +1,36 @@
+# render.yaml — "Blueprint" de Render: crea el Web Service con un clic
+# (Render → New → Blueprint → elige este repositorio).
+# Las variables con sync: false se escriben a mano en el panel de Render (son secretas).
+services:
+  - type: web
+    name: aees-web
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASS
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: MP_ACCESS_TOKEN
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: ORS_API_KEY
+        sync: false

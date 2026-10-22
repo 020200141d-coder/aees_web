@@ -1,0 +1,39 @@
+<%#
+  header.ejs — navegación fija. En la portada los enlaces hacen scroll suave
+  (data-scroll); en las demás páginas llevan a /#seccion.
+  El contador de "Mi evento" lo actualiza public/js/evento.js con lo que hay en el carrito.
+  `solido` = header con fondo desde el inicio (páginas sin hero de foto).
+%>
+<% const enPortada = rutaActual === '/'; const ir = id => enPortada ? `#${id}` : `/#${id}`; %>
+<div class="progreso-lectura" aria-hidden="true"><span></span></div>
+
+<header class="header<%= typeof solido !== 'undefined' && solido ? ' solido' : '' %>" id="header">
+  <nav class="nav contenedor" aria-label="Principal">
+    <a href="/" class="logo">
+      <span class="logo-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span>AeeS<b>.</b>Acústico</span>
+    </a>
+
+    <ul class="nav-links" id="nav-links">
+      <li><a href="<%= ir('servicios') %>" <%= enPortada ? 'data-scroll' : '' %>>Servicios</a></li>
+      <li><a href="<%= ir('combos') %>" <%= enPortada ? 'data-scroll' : '' %>>Combos</a></li>
+      <li><a href="<%= ir('equipos') %>" <%= enPortada ? 'data-scroll' : '' %>>Equipos</a></li>
+      <li><a href="<%= ir('eventos') %>" <%= enPortada ? 'data-scroll' : '' %>>Eventos</a></li>
+      <li><a href="/asistente" class="<%= rutaActual === '/asistente' ? 'activo' : '' %>">Arma tu evento</a></li>
+      <li><a href="<%= ir('contacto') %>" <%= enPortada ? 'data-scroll' : '' %>>Contacto</a></li>
+    </ul>
+
+    <div class="nav-acciones">
+      <a href="/mi-evento" class="btn-icono" aria-label="Mi evento" title="Mi evento">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span class="contador-evento" id="contador-evento" aria-live="polite"></span>
+      </a>
+      <a href="<%= usuario ? (usuario.rol === 'cliente' ? '/cuenta' : '/admin') : '/cuenta/ingresar' %>" class="btn-icono" aria-label="<%= usuario ? 'Mi cuenta' : 'Ingresar' %>" title="<%= usuario ? usuario.nombre : 'Ingresar' %>">
+        <i class="fa-<%= usuario ? 'solid' : 'regular' %> fa-user"></i>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav-links">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+</header>

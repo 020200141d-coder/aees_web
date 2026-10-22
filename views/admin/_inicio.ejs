@@ -1,0 +1,61 @@
+<%#
+  admin/_inicio.ejs — cabecera común del panel: <head> + barra lateral.
+  Cada vista del panel empieza con include('_inicio') y termina con include('_fin').
+  El menú muestra solo lo que el rol puede usar (publicador: combos y galería).
+%>
+<%
+  const esAdmin = usuario?.rol === 'admin';
+  const enlaces = [
+    ['Trabajo', [
+      ['inicio', '/admin', 'fa-solid fa-gauge-high', 'Inicio y agenda', true],
+      ['reservas', '/admin/reservas', 'fa-solid fa-calendar-check', 'Reservas', esAdmin, pendientes.yape],
+      ['mensajes', '/admin/mensajes', 'fa-regular fa-envelope', 'Mensajes', esAdmin, pendientes.mensajes],
+      ['clientes', '/admin/clientes', 'fa-solid fa-users', 'Clientes', esAdmin]
+    ]],
+    ['Catálogo y publicaciones', [
+      ['equipos', '/admin/equipos', 'fa-solid fa-volume-high', 'Equipos', esAdmin],
+      ['combos', '/admin/combos', 'fa-solid fa-box-open', 'Combos y ofertas', true],
+      ['galeria', '/admin/galeria', 'fa-regular fa-images', 'Galería de eventos', true],
+      ['promociones', '/admin/promociones', 'fa-solid fa-ticket', 'Promociones', esAdmin]
+    ]],
+    ['Configuración', [
+      ['ajustes', '/admin/ajustes', 'fa-solid fa-sliders', 'Negocio y tarifas', esAdmin],
+      ['usuarios', '/admin/usuarios', 'fa-solid fa-user-shield', 'Personal', esAdmin],
+      ['respaldo', '/admin/respaldo', 'fa-solid fa-database', 'Respaldo', esAdmin]
+    ]]
+  ];
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="csrf" content="<%= csrf %>">
+  <title><%= titulo %> · Panel AeeS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+<div class="admin-layout">
+  <nav class="lateral" aria-label="Panel">
+    <a href="/admin" class="logo" style="background:none;box-shadow:none"><span class="logo-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>AeeS<b>.</b>Panel<small><%= esAdmin ? 'Administrador' : 'Publicador' %></small></span></a>
+    <% enlaces.forEach(([grupo, items]) => { const visibles = items.filter(i => i[4]); if (!visibles.length) return; %>
+      <span class="lateral-grupo"><%= grupo %></span>
+      <% visibles.forEach(([id, href, icono, texto, , insignia]) => { %>
+        <a href="<%= href %>" class="<%= seccion === id ? 'activo' : '' %>"><i class="<%= icono %>"></i><%= texto %><% if (insignia) { %><span class="insignia"><%= insignia %></span><% } %></a>
+      <% }) %>
+    <% }) %>
+    <div class="lateral-pie">
+      <div><b><%= usuario.nombre %></b><%= usuario.email %></div>
+      <a href="/" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ver sitio público</a>
+      <form method="post" action="/admin/salir"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm btn-bloque"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button></form>
+    </div>
+  </nav>
+  <main class="admin-main">
+    <%- include('../partials/flash') %>

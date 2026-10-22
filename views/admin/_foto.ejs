@@ -1,0 +1,19 @@
+<%#
+  admin/_foto.ejs — campo de imagen reutilizable: pegar URL o subir desde la PC/celular.
+  Recibe `nombre` (name del input), `valor` y `error`. La subida la hace public/js/admin.js:
+  reduce la foto a máx. 1600 px en el navegador y la envía a POST /admin/fotos.
+%>
+<div class="campo-simple ancho<%= error ? ' error' : '' %>">
+  <span>Foto</span>
+  <div class="subir-foto" data-subir-foto>
+    <div class="vista<%= valor ? ' con-foto' : '' %>" style="<%= valor ? `background-image:url('${valor}')` : '' %>"><i class="fa-regular fa-image"></i></div>
+    <div style="display:grid;gap:.5rem">
+      <input name="<%= nombre %>" value="<%= valor || '' %>" placeholder="https://... o sube una foto" data-url-foto>
+      <div class="acciones">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i class="fa-solid fa-upload"></i> Subir foto<input type="file" accept="image/jpeg,image/png,image/webp" hidden data-archivo-foto></label>
+        <small class="ayuda">Se reduce automáticamente a 1600 px antes de subir.</small>
+      </div>
+    </div>
+  </div>
+  <span class="campo-error"><%= error || '' %></span>
+</div>

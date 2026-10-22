@@ -1,0 +1,28 @@
+<%#
+  admin/clientes.ejs — clientes registrados. Los que tienen N reservas pagadas o más
+  (Ajustes → reglas) son "frecuentes": reciben el descuento automático y pueden usar
+  promociones exclusivas. Desde aquí se les puede escribir por WhatsApp con una oferta.
+%>
+<% const { soles } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Clientes</h1><p><%= clientes.length %> registrados · frecuente = <%= minimo %>+ reservas pagadas</p></div></header>
+<div class="tabla-caja">
+  <table class="tabla">
+    <thead><tr><th>Cliente</th><th>Contacto</th><th class="num">Reservas</th><th class="num">Pagadas</th><th class="num">Total</th><th>Último evento</th><th></th></tr></thead>
+    <tbody>
+      <% if (!clientes.length) { %><tr><td colspan="7" class="suave" style="text-align:center;padding:2rem">Aún no hay clientes registrados.</td></tr><% } %>
+      <% clientes.forEach(c => { const frecuente = c.pagadas >= minimo; %>
+        <tr>
+          <td><b><%= c.nombre %></b> <% if (frecuente) { %><span class="chip chip-oro"><i class="fa-solid fa-star"></i> Frecuente</span><% } %><br><small class="suave">desde <%= (c.creado_en || '').slice(0, 10) %><%= c.dni ? ` · DNI ${c.dni}` : '' %></small></td>
+          <td><small><%= c.celular || '' %><br><%= c.email || '' %></small></td>
+          <td class="num"><%= c.reservas %></td>
+          <td class="num"><%= c.pagadas %></td>
+          <td class="num"><%= soles(c.gastado) %></td>
+          <td><%= c.ultima || '—' %></td>
+          <td><% if (c.celular) { %><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= c.celular %>?text=<%= encodeURIComponent(frecuente ? `Hola ${c.nombre.split(' ')[0]}, gracias por confiar en AeeS Acústico. Como cliente frecuente tienes un descuento en tu próximo evento con el código FRECUENTE10.` : `Hola ${c.nombre.split(' ')[0]}, te saluda AeeS Acústico. ¿Tienes algún evento próximo? Tenemos combos con precio especial.`) %>"><i class="fa-brands fa-whatsapp"></i> <%= frecuente ? 'Enviar promo' : 'Escribir' %></a><% } %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('_fin') %>

@@ -1,0 +1,88 @@
+<%#
+  admin/ajustes.ejs — configuración del negocio en 4 formularios independientes:
+   1. Datos del negocio (contacto, redes, almacén, Yape)
+   2. Reglas de precios (adelanto %, horas de bloqueo, jornada, técnico, cliente frecuente)
+   3. Vehículos y tarifas de transporte
+   4. Fotos de portada
+%>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Negocio y tarifas</h1><p>Lo que cambies aquí se aplica de inmediato en el sitio, el asistente y las cotizaciones.</p></div></header>
+
+<form method="post" action="/admin/ajustes/negocio" class="tarjeta" id="negocio">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2><i class="fa-solid fa-store"></i> Datos del negocio</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Nombre<input name="nombre" value="<%= n.nombre %>" maxlength="80"></label>
+    <label class="campo-simple">Eslogan<input name="eslogan" value="<%= n.eslogan %>" maxlength="120"></label>
+    <label class="campo-simple ancho">Descripción<textarea name="descripcion" maxlength="400"><%= n.descripcion %></textarea></label>
+    <label class="campo-simple">Teléfono<input name="telefono" value="<%= n.telefono %>" maxlength="12"></label>
+    <label class="campo-simple">WhatsApp (con 51)<input name="whatsapp" value="<%= n.whatsapp %>" maxlength="11"><small class="ayuda">Ej. 51987166001</small></label>
+    <label class="campo-simple">Correo<input name="correo" type="email" value="<%= n.correo %>"></label>
+    <label class="campo-simple">Horario<input name="horario" value="<%= n.horario %>"></label>
+    <label class="campo-simple ancho">Dirección<input name="direccion" value="<%= n.direccion %>"></label>
+    <label class="campo-simple">Instagram (URL)<input name="instagram" value="<%= n.redes?.instagram %>"></label>
+    <label class="campo-simple">Facebook (URL)<input name="facebook" value="<%= n.redes?.facebook %>"></label>
+    <label class="campo-simple">TikTok (URL)<input name="tiktok" value="<%= n.redes?.tiktok %>"></label>
+  </div>
+  <h2 style="margin-top:1.4rem"><i class="fa-solid fa-warehouse"></i> Almacén (punto de partida de las rutas)</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Latitud<input name="almacen_lat" value="<%= n.almacen?.lat %>"></label>
+    <label class="campo-simple">Longitud<input name="almacen_lng" value="<%= n.almacen?.lng %>"></label>
+    <label class="campo-simple">Referencia<input name="almacen_direccion" value="<%= n.almacen?.direccion %>"><small class="ayuda">Tip: en Google Maps, clic derecho sobre el almacén → copia las coordenadas.</small></label>
+  </div>
+  <h2 style="margin-top:1.4rem"><i class="fa-solid fa-mobile-screen" style="color:#c77dff"></i> Yape</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Número Yape<input name="yape_numero" value="<%= n.yape?.numero %>" maxlength="9"></label>
+    <label class="campo-simple">Titular<input name="yape_titular" value="<%= n.yape?.titular %>"></label>
+    <%- include('_foto', { nombre: 'yape_qr', valor: n.yape?.qr_url, error: null }) %>
+  </div>
+  <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar datos del negocio</button></div>
+</form>
+
+<form method="post" action="/admin/ajustes/reglas" class="tarjeta" id="reglas">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2><i class="fa-solid fa-scale-balanced"></i> Reglas de precios y reservas</h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Adelanto para separar (%)<input name="adelanto_pct" type="number" min="10" max="100" value="<%= reglas.adelanto_pct %>"></label>
+    <label class="campo-simple">Horas que se bloquea la fecha sin pagar<input name="horas_bloqueo" type="number" min="1" max="168" value="<%= reglas.horas_bloqueo %>"></label>
+    <label class="campo-simple">Horas por jornada<input name="horas_jornada" type="number" min="1" max="12" value="<%= reglas.horas_jornada %>"></label>
+    <label class="campo-simple">Factor por jornada extra<input name="factor_jornada_extra" type="number" step="0.05" min="0" max="2" value="<%= reglas.factor_jornada_extra %>"><small class="ayuda">1 = cada jornada extra cuesta igual (8 h = doble). 0.5 = mitad.</small></label>
+    <label class="campo-simple">Técnico por jornada (S/)<input name="tecnico_por_jornada" type="number" min="0" value="<%= reglas.tecnico_por_jornada %>"></label>
+    <label class="campo-simple">Descuento cliente frecuente (%)<input name="descuento_frecuente_pct" type="number" min="0" max="50" value="<%= reglas.descuento_frecuente_pct %>"></label>
+    <label class="campo-simple">Reservas pagadas para ser frecuente<input name="reservas_para_frecuente" type="number" min="1" value="<%= reglas.reservas_para_frecuente %>"></label>
+  </div>
+  <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar reglas</button></div>
+</form>
+
+<form method="post" action="/admin/ajustes/vehiculos" class="tarjeta" id="vehiculos">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2><i class="fa-solid fa-truck"></i> Vehículos y tarifas de transporte</h2>
+  <p class="suave" style="font-size:.85rem;margin-bottom:1rem">Costo ida y vuelta = base + (S/ por km × km de ida). Se elige el vehículo más barato donde entre la carga (con 15% de margen).</p>
+  <div class="tabla-caja">
+    <table class="tabla">
+      <thead><tr><th>Nombre</th><th>Capacidad (L)</th><th>Carga (kg)</th><th>Largo máx. (cm)</th><th>Base S/</th><th>S/ por km</th></tr></thead>
+      <tbody>
+        <% vehiculos.forEach((v, i) => { %>
+          <tr>
+            <td><input type="hidden" name="vehiculos[<%= i %>][id]" value="<%= v.id %>"><input class="estado-select" style="width:100%" name="vehiculos[<%= i %>][nombre]" value="<%= v.nombre %>"><input type="hidden" name="vehiculos[<%= i %>][descripcion]" value="<%= v.descripcion %>"></td>
+            <% ['capacidad_l', 'capacidad_kg', 'largo_max_cm', 'base', 'por_km'].forEach(k => { %><td><input class="estado-select" style="width:90px" type="number" step="0.01" min="0" name="vehiculos[<%= i %>][<%= k %>]" value="<%= v[k] %>"></td><% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar tarifas</button></div>
+</form>
+
+<form method="post" action="/admin/ajustes/portada" class="tarjeta" id="portada">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2><i class="fa-regular fa-images"></i> Fotos de portada</h2>
+  <div class="form-rejilla">
+    <% [['hero', 'Fondo principal (hero)'], ['boda', 'Tarjeta Bodas'], ['electronica', 'Tarjeta Fiesta electrónica'], ['corporativo', 'Tarjeta Corporativo']].forEach(([k, t]) => { %>
+      <div class="ancho"><b style="font-size:.85rem"><%= t %></b><%- include('_foto', { nombre: k, valor: portada[k], error: null }) %></div>
+    <% }) %>
+    <label class="campo-simple ancho">Créditos de fotos (pie de página)<input name="fuentes" value="<%= portada.fuentes %>" maxlength="200"></label>
+  </div>
+  <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar portada</button></div>
+</form>
+<%- include('_fin') %>

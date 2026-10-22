@@ -1,0 +1,29 @@
+<%# admin/ingresar.ejs — ingreso del personal (admin o publicador) con correo y contraseña. %>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Ingreso del personal · AeeS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+  <main class="ingreso-admin">
+    <form class="tarjeta" method="post" action="/admin/ingresar" style="display:grid;gap:1rem">
+      <a href="/" class="logo"><span class="logo-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>AeeS<b>.</b>Panel</span></a>
+      <div><h1 style="font-size:1.6rem">Ingreso del personal</h1><p class="suave">Administradores y publicadores.</p></div>
+      <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="volver" value="<%= volver %>">
+      <label class="campo-simple">Correo<input name="email" type="email" value="<%= email %>" autocomplete="username" required autofocus></label>
+      <label class="campo-simple">Contraseña<input name="clave" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-primario btn-bloque"><i class="fa-solid fa-right-to-bracket"></i> Ingresar</button>
+      <a href="/" class="suave" style="font-size:.85rem;text-align:center">← Volver al sitio</a>
+    </form>
+  </main>
+</body>
+</html>

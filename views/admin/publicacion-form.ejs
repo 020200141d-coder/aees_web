@@ -1,0 +1,26 @@
+<%# admin/publicacion-form.ejs — crear / editar una foto de la galería de eventos realizados. %>
+<% const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1><%= nuevo ? 'Nueva publicación' : 'Editar publicación' %></h1><p>Una buena foto vende más que mil palabras: muestra el montaje, los acabados y el ambiente.</p></div>
+  <a href="/admin/galeria" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+</header>
+<form method="post" action="<%= nuevo ? '/admin/galeria' : `/admin/galeria/${p.id}` %>" class="tarjeta" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="form-rejilla">
+    <%- include('_foto', { nombre: 'imagen', valor: p.imagen, error: errores.imagen }) %>
+    <label class="campo-simple<%= errores.titulo ? ' error' : '' %>">Título<input name="titulo" value="<%= p.titulo || '' %>" maxlength="100" required placeholder="Boda en Urubamba con line array"><%- err('titulo') %></label>
+    <label class="campo-simple">Tipo de evento
+      <select name="tipo"><% Object.entries(TIPOS_PUB).forEach(([id, t]) => { %><option value="<%= id %>" <%= p.tipo === id ? 'selected' : '' %>><%= t %></option><% }) %></select>
+    </label>
+    <label class="campo-simple ancho">Texto corto (qué se hizo)<textarea name="texto" maxlength="600"><%= p.texto || '' %></textarea></label>
+    <label class="campo-simple">Fuente de la foto<input name="imagen_fuente" value="<%= p.imagen_fuente || '' %>" maxlength="120"></label>
+    <label class="campo-simple">Orden<input name="orden" type="number" value="<%= p.orden || 0 %>"></label>
+    <label class="casilla ancho"><input type="checkbox" name="publicado" <%= p.publicado ? 'checked' : '' %>> Publicado en la portada</label>
+  </div>
+  <div class="form-pie">
+    <a href="/admin/galeria" class="btn btn-ghost btn-sm">Cancelar</a>
+    <button class="btn btn-primario btn-sm"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+  </div>
+</form>
+<%- include('_fin') %>

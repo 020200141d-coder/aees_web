@@ -1,0 +1,4 @@
+<%# flash.ejs — mensaje de una sola vez (éxito, error o aviso) que dejó la página anterior. %>
+<% if (flash) { %>
+  <div class="flash flash-<%= flash.tipo %>" role="status"><%= flash.texto %></div>
+<% } %>

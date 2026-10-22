@@ -1,0 +1,14 @@
+<%# error.ejs — errores (403, 500...). `mensaje` ya viene filtrado: nunca muestra detalles internos. %>
+<%- include('partials/head') %>
+<body>
+  <main class="error-404">
+    <div class="error-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 style="font-size:clamp(4rem,14vw,7rem)"><%= String(status).slice(0, 1) %><span><%= String(status).slice(1, 2) %></span><%= String(status).slice(2) %></h1>
+    <p><%= mensaje %></p>
+    <div class="hero-acciones" style="justify-content:center">
+      <a href="/" class="btn btn-primario"><i class="fa-solid fa-house"></i> Inicio</a>
+      <a href="https://wa.me/<%= negocio.whatsapp %>" class="btn btn-wa" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Escríbenos</a>
+    </div>
+  </main>
+</body>
+</html>
