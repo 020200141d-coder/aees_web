@@ -13,9 +13,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const TABLAS = require('./tablas');
 
-// trim(): al pegar las claves en el panel de Render (casillas de varias líneas)
-// es fácil que se cuele un espacio o salto de línea, y la clave dejaría de valer.
-const cliente = createClient(process.env.SUPABASE_URL.trim(), process.env.SUPABASE_SERVICE_KEY.trim(), {
+// Al pegar las claves en el panel de Render (casillas de varias líneas) se puede
+// colar un espacio o salto de línea, incluso en medio de la clave, y dejaría de
+// valer. Una URL o una clave nunca llevan espacios, así que se quitan todos.
+const sinEspacios = v => String(v || '').replace(/\s+/g, '');
+const cliente = createClient(sinEspacios(process.env.SUPABASE_URL), sinEspacios(process.env.SUPABASE_SERVICE_KEY), {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 

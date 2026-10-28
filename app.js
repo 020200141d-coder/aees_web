@@ -62,13 +62,14 @@ app.use((req, res, next) => {
 // Supabase, un retraso de la base haría fallar el despliegue completo.
 app.get('/salud', (req, res) => res.json({ ok: true, motor: require('./src/db').motor }));
 
-// Diagnóstico aparte (no lo usa Render): prueba la base y devuelve el mensaje
-// de error y cuánto tardó. Nunca muestra las claves.
+// Diagnóstico aparte (no lo usa Render): dice si la base responde y cuánto tarda.
+// Es pública, así que NO devuelve el mensaje de error (podría contener una clave):
+// el detalle completo solo va al log del servidor.
 app.get('/salud/base', async (req, res) => {
   const db = require('./src/db');
   const inicio = Date.now();
   let base = 'ok';
-  try { await db.ajuste('negocio'); } catch (err) { base = `${err.name}: ${err.message}${err.cause ? ` (${err.cause.code || err.cause.message})` : ''}`; }
+  try { await db.ajuste('negocio'); } catch (err) { base = 'error (ver logs del servidor)'; console.error('[salud/base]', err.message); }
   res.json({ motor: db.motor, base, ms: Date.now() - inicio });
 });
 
