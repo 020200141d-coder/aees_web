@@ -13,7 +13,9 @@
 const { createClient } = require('@supabase/supabase-js');
 const TABLAS = require('./tablas');
 
-const cliente = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+// trim(): al pegar las claves en el panel de Render (casillas de varias líneas)
+// es fácil que se cuele un espacio o salto de línea, y la clave dejaría de valer.
+const cliente = createClient(process.env.SUPABASE_URL.trim().replace(//+$/, ''), process.env.SUPABASE_SERVICE_KEY.trim(), {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 

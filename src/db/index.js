@@ -23,7 +23,7 @@
 //   guardarFoto(nombre, buffer, tipo)        → URL pública de la foto
 // ============================================================================
 
-const usarSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
+const usarSupabase = Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_KEY?.trim());
 
 const db = usarSupabase ? require('./supabase') : require('./local');
 
