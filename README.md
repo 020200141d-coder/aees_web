@@ -13,7 +13,7 @@ Proyecto del curso Desarrollo de Software II — Unidad II · Ingeniería de Sis
 | # | Rol | API | Para qué se usa | Archivo |
 |---|-----|-----|-----------------|---------|
 | 1 | Mapa y rutas | **OpenStreetMap (Leaflet + Nominatim) + OSRM / OpenRouteService** | Buscar el lugar del evento, poner el pin, calcular la ruta real por carretera desde el almacén y elegir el vehículo y su costo | `src/servicios/rutas.js`, `src/servicios/transporte.js` |
-| 2 | Inteligencia artificial | **Claude API (Anthropic)** | Entender un pedido escrito con palabras comunes y explicar la recomendación de forma personal | `src/servicios/ia.js` |
+| 2 | Inteligencia artificial | **Google Gemini API** (gratis) o **Claude API** (Anthropic, de pago) | Entender un pedido escrito con palabras comunes y explicar la recomendación de forma personal | `src/servicios/ia.js` |
 | 3 | Pagos | **Mercado Pago Checkout Pro** (+ Yape manual) | Cobrar el adelanto que separa la fecha y los equipos | `src/servicios/pagos.js` |
 | + | Clima | **OpenWeather** (o Open-Meteo) | Avisar si llueve el día del evento y sugerir toldo en eventos al aire libre | `src/servicios/clima.js` |
 
@@ -85,7 +85,8 @@ npm run semilla
 | Servicio | Pasos | Variable |
 |----------|-------|----------|
 | **Supabase** | supabase.com → New project → SQL Editor → pega `supabase/esquema.sql` → Run. En Settings → API copia la URL y la *service_role key*. Luego `npm run semilla` | `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` |
-| **Claude (IA)** | console.anthropic.com → API Keys | `ANTHROPIC_API_KEY` |
+| **Gemini (IA gratis)** | aistudio.google.com/apikey → Create API key (sin tarjeta) | `GEMINI_API_KEY` |
+| **Claude (IA, de pago)** | console.anthropic.com → API Keys (requiere crédito) | `ANTHROPIC_API_KEY` |
 | **Google** | console.cloud.google.com → Credenciales → ID de cliente OAuth (aplicación web). Orígenes autorizados: `http://localhost:3000` y tu dominio de Render | `GOOGLE_CLIENT_ID` |
 | **Mercado Pago** | mercadopago.com.pe/developers → Tus integraciones → credenciales de prueba (empiezan con `TEST-`) | `MP_ACCESS_TOKEN`, `BASE_URL` |
 | **OpenWeather** | openweathermap.org → API keys | `OPENWEATHER_API_KEY` |

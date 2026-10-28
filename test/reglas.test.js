@@ -13,7 +13,8 @@ const semilla = require('../data/semilla.json');
 const { factorTiempo, precioUnitario, subtotalEquipos } = require('../src/servicios/precios');
 const { carga } = require('../src/servicios/transporte');
 const { recomendar } = require('../src/servicios/recomendador');
-const { interpretarReglas } = require('../src/servicios/ia');
+const ia = require('../src/servicios/ia');
+const { interpretarReglas } = ia;
 
 const mapa = Object.fromEntries(semilla.equipos.map(e => [e.id, e]));
 const libres = Object.fromEntries(semilla.equipos.map(e => [e.id, e.cantidad_total]));
@@ -100,4 +101,48 @@ test('sin IA, el intérprete por palabras clave entiende el pedido de la mamá',
   assert.equal(d.espacio, 'exterior');
   assert.equal(d.lugar, 'Urubamba');
   assert.ok(d.extras.orquesta && d.extras.dj);
+});
+
+test('con GEMINI_API_KEY, interpretar usa la API de Gemini y valida su JSON', async () => {
+  // Simulamos la respuesta HTTP de Gemini (no se gasta la clave ni hace falta internet).
+  const fetchReal = global.fetch;
+  let pedido;
+  global.fetch = async (url, opciones) => {
+    pedido = { url, cuerpo: JSON.parse(opciones.body), clave: opciones.headers['x-goog-api-key'] };
+    const texto = '```json\n{"tipo_evento":"boda","personas":120,"espacio":"exterior","horas":0,"lugar":"Urubamba","fecha":"","extras":{"orquesta":true,"banda":false,"dj":true,"proyeccion":false,"luces":true},"equipos_mencionados":[],"nivel_tecnico":"basico","extra_inventado":"x"}\n```';
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: texto }] } }] }) };
+  };
+  process.env.GEMINI_API_KEY = 'clave-de-prueba';
+  try {
+    const d = await ia.interpretar('boda de 120 invitados con orquesta y dj en un jardín de Urubamba');
+    assert.equal(ia.proveedor(), 'gemini');
+    assert.match(pedido.url, /generativelanguage\.googleapis\.com\/v1beta\/models\/.+:generateContent$/);
+    assert.equal(pedido.clave, 'clave-de-prueba');
+    assert.equal(pedido.cuerpo.generationConfig.responseMimeType, 'application/json');
+    assert.equal(d.fuente, 'ia');
+    assert.equal(d.tipo_evento, 'boda');
+    assert.equal(d.personas, 120);
+    assert.equal(d.horas, null);
+    assert.equal(d.extra_inventado, undefined);
+  } finally {
+    global.fetch = fetchReal;
+    delete process.env.GEMINI_API_KEY;
+  }
+});
+
+test('si Gemini falla, se usa el intérprete por palabras clave', async () => {
+  const fetchReal = global.fetch;
+  global.fetch = async () => ({ ok: false, status: 429, json: async () => ({ error: { message: 'cuota agotada' } }) });
+  process.env.GEMINI_API_KEY = 'clave-de-prueba';
+  const avisoReal = console.warn;
+  console.warn = () => {};
+  try {
+    const d = await ia.interpretar('cumpleaños de 80 personas');
+    assert.equal(d.fuente, 'reglas');
+    assert.equal(d.tipo_evento, 'cumpleanos');
+  } finally {
+    global.fetch = fetchReal;
+    console.warn = avisoReal;
+    delete process.env.GEMINI_API_KEY;
+  }
 });
