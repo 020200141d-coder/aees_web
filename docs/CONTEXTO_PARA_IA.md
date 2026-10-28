@@ -7,7 +7,7 @@
 
 ## Lo que te pido
 
-Eres mi asistente técnico. Soy Edson, estudiante de Ingeniería de Sistemas (Universidad Andina del Cusco) y dueño de **AeeS Acústico**, un negocio de alquiler de sonido, luces y pantallas LED en Cusco. Con la información de abajo, arma un **manual de operación en forma de formulario / preguntas y respuestas**, en español sencillo, que yo pueda consultar desde el celular. Debe cubrir:
+Eres mi asistente técnico. Soy Edson, estudiante de Ingeniería de Sistemas (Universidad Andina del Cusco) y dueño de **AeeS Acústico**. El proyecto lo presentamos en equipo: **Edson Francisco Lino Aguirre Bravo** y **Adrian Mauricio Paredes Claros**. AeeS Acústico, un negocio de alquiler de sonido, luces y pantallas LED en Cusco. Con la información de abajo, arma un **manual de operación en forma de formulario / preguntas y respuestas**, en español sencillo, que yo pueda consultar desde el celular. Debe cubrir:
 
 1. **Qué tiene** el sistema (cada función del sitio y del panel).
 2. **Cómo funciona** cada parte (flujo paso a paso).

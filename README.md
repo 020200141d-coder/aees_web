@@ -44,7 +44,7 @@
 16. [Solución de problemas](#16-solución-de-problemas)
 17. [Hoja de ruta](#17-hoja-de-ruta)
 18. [Créditos y licencias de terceros](#18-créditos-y-licencias-de-terceros)
-19. [Autor y licencia](#19-autor-y-licencia)
+19. [Autores y licencia](#19-autores-y-licencia)
 
 ---
 
@@ -331,9 +331,13 @@ El avance detallado está en [`PLAN.md`](PLAN.md). Próximos pasos: fotos propia
 - **Clima:** Open-Meteo (CC BY 4.0) / OpenWeather.
 - **Íconos:** Font Awesome Free. **Librerías:** Leaflet, GSAP, SweetAlert2 y Cropper.js, con sus respectivas licencias.
 
-## 19. Autor y licencia
+## 19. Autores y licencia
 
-**Edson Francisco Lino Aguirre Bravo** — Ingeniería de Sistemas, Universidad Andina del Cusco · AeeS Acústico, Cusco, Perú.
-WhatsApp: [+51 987 166 001](https://wa.me/51987166001)
+| Integrante | Carrera |
+|---|---|
+| **Edson Francisco Lino Aguirre Bravo** | Ingeniería de Sistemas — Universidad Andina del Cusco |
+| **Adrian Mauricio Paredes Claros** | Ingeniería de Sistemas — Universidad Andina del Cusco |
+
+AeeS Acústico, Cusco, Perú · WhatsApp: [+51 987 166 001](https://wa.me/51987166001)
 
 Código bajo licencia [MIT](LICENSE). El logo, la marca y las fotos propias de AeeS Acústico **no** están incluidos en esa licencia.

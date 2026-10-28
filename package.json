@@ -13,7 +13,7 @@
   "engines": {
     "node": "22.x"
   },
-  "author": "Edson Francisco Lino Aguirre Bravo",
+  "author": "Edson Francisco Lino Aguirre Bravo, Adrian Mauricio Paredes Claros",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
