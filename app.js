@@ -57,6 +57,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Ruta de salud para Render (healthCheckPath): responde sin tocar la base de
+// datos, así un problema con Supabase no impide que el servidor se publique.
+app.get('/salud', (req, res) => res.json({ ok: true, motor: require('./src/db').motor }));
+
 // ── 2. Estáticos ─────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: ES_PROD ? '7d' : 0 }));
 
