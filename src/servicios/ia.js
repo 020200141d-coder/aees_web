@@ -27,7 +27,12 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 const MODELO_CLAUDE = process.env.IA_MODELO || 'claude-opus-5-5';
-const MODELO_GEMINI = process.env.GEMINI_MODELO || 'gemini-2.5-flash';
+// Cadena de modelos gratuitos de Gemini: si uno está saturado (503), sin cuota
+// (429), retirado (404) o tarda demasiado, se prueba el siguiente. Google retira
+// modelos seguido; GEMINI_MODELO permite poner otro primero sin tocar el código.
+const MODELOS_GEMINI = [...new Set([process.env.GEMINI_MODELO, 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean))];
+// Tiempo máximo total probando modelos: pasado esto se usa el plan B por reglas.
+const PRESUPUESTO_MS = 30000;
 
 function proveedor() {
   const hayGemini = Boolean(process.env.GEMINI_API_KEY), hayClaude = Boolean(process.env.ANTHROPIC_API_KEY);
@@ -40,8 +45,8 @@ const activa = () => proveedor() !== null;
 //  Envío:   { systemInstruction, contents:[{role:'user', parts:[{text}]}], generationConfig }
 //  Recibo:  { candidates:[{ content:{ parts:[{ text }] } }] }
 //  Con responseMimeType 'application/json' Gemini responde solo JSON válido.
-async function llamarGemini({ system, mensaje, json, maxTokens }) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODELO_GEMINI)}:generateContent`;
+async function llamarModeloGemini(modelo, { system, mensaje, json, maxTokens }, limiteMs) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
@@ -50,13 +55,32 @@ async function llamarGemini({ system, mensaje, json, maxTokens }) {
       contents: [{ role: 'user', parts: [{ text: mensaje }] }],
       generationConfig: { temperature: json ? 0.1 : 0.7, maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) }
     }),
-    signal: AbortSignal.timeout(25000)
+    // Cada modelo tiene lo que quede del presupuesto (máx. 16 s): el cliente está esperando.
+    signal: AbortSignal.timeout(limiteMs)
   });
   const datos = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Gemini respondió ${res.status}: ${datos.error?.message || 'error'}`);
+  if (!res.ok) throw Object.assign(new Error(`Gemini (${modelo}) respondió ${res.status}: ${datos.error?.message || 'error'}`), { status: res.status });
   const texto = (datos.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
-  if (!texto) throw new Error(`Gemini no devolvió texto (${datos.candidates?.[0]?.finishReason || datos.promptFeedback?.blockReason || 'sin motivo'}).`);
+  if (!texto) throw new Error(`Gemini (${modelo}) no devolvió texto (${datos.candidates?.[0]?.finishReason || datos.promptFeedback?.blockReason || 'sin motivo'}).`);
   return texto;
+}
+
+async function llamarGemini(opciones) {
+  let ultimoError;
+  const inicio = Date.now();
+  for (const modelo of MODELOS_GEMINI) {
+    const restante = PRESUPUESTO_MS - (Date.now() - inicio);
+    if (restante < 3000) break;
+    try {
+      return await llamarModeloGemini(modelo, opciones, Math.min(16000, restante));
+    } catch (err) {
+      ultimoError = err;
+      // 400/401/403 = la petición o la clave están mal: otro modelo no lo arregla.
+      if ([400, 401, 403].includes(err.status)) break;
+      console.warn(`[ia] ${err.message} → pruebo el siguiente modelo`);
+    }
+  }
+  throw ultimoError;
 }
 
 // ── Claude: SDK oficial de Anthropic ────────────────────────────────────────
