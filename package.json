@@ -11,7 +11,7 @@
     "test": "node --test"
   },
   "engines": {
-    "node": ">=20.12"
+    "node": "22.x"
   },
   "author": "Edson Francisco Lino Aguirre Bravo",
   "license": "MIT",
