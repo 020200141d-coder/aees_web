@@ -42,10 +42,11 @@
         <div class="lista-agenda">
           <% yapePendientes.forEach(p => { %>
             <div class="mensaje ocupada">
-              <b><i class="fa-solid fa-mobile-screen" style="color:#c77dff"></i> Yape por verificar · <%= soles(p.monto) %></b>
+              <b><i class="fa-solid fa-mobile-screen" style="color:#c77dff"></i> <%= p.detalle?.app === 'plin' ? 'Plin' : 'Yape' %> por verificar · <%= soles(p.monto) %></b>
+              <% if (p.detalle?.comprobante) { %><a href="/admin/pagos/<%= p.id %>/comprobante" target="_blank" rel="noopener" class="comprobante-mini" title="Abrir el comprobante"><img src="/admin/pagos/<%= p.id %>/comprobante" alt="Comprobante de pago" loading="lazy"></a><% } %>
               <small class="suave">Reserva <a href="/admin/reservas/<%= p.reserva?.codigo %>" style="color:var(--primario)"><%= p.reserva?.codigo %></a> · operación <b><%= p.referencia %></b> · <%= p.reserva?.datos_cliente?.nombre %></small>
               <div class="mensaje-pie">
-                <form method="post" action="/admin/pagos/<%= p.id %>/aprobar"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="volver" value="/admin"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-check"></i> Lo vi en Yape: aprobar</button></form>
+                <form method="post" action="/admin/pagos/<%= p.id %>/aprobar"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="volver" value="/admin"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-check"></i> Lo vi en mi Yape/Plin: aprobar</button></form>
                 <form method="post" action="/admin/pagos/<%= p.id %>/rechazar" data-confirmar="¿Rechazar este pago? El cliente deberá volver a pagar."><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="volver" value="/admin"><button class="btn btn-ghost btn-sm">Rechazar</button></form>
               </div>
             </div>

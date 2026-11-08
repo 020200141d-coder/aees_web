@@ -693,3 +693,24 @@ body.cursor-hover .cursor-anillo { width: 60px; height: 60px; margin: -30px 0 0 
 /* El atributo hidden siempre oculta, aunque la clase del elemento tenga display:grid/flex
    (antes el aviso de "evento vacío" se veía junto con el evento). */
 [hidden] { display: none !important; }
+
+/* ── Pago con Yape o Plin (página de la reserva) ────────────────────────── */
+.pasos-pago { padding-left: 1.2rem; display: grid; gap: .35rem; margin-bottom: 1rem; font-size: .92rem; }
+.monto-pagar { color: var(--primario); font-size: 1.15rem; }
+.billeteras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.billetera { display: grid; justify-items: center; gap: .35rem; padding: .8rem; border-radius: 14px; border: 1px solid var(--borde); border-top: 4px solid var(--color-app); text-align: center; min-width: 0; }
+.billetera img { width: 100%; max-width: 170px; aspect-ratio: 1; object-fit: contain; background: #fff; border-radius: 10px; padding: 6px; }
+.form-comprobante { display: grid; gap: .8rem; }
+.elegir-app { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
+.subir-comprobante { cursor: pointer; }
+.vista-comprobante { display: grid; place-items: center; gap: .4rem; min-height: 130px; padding: 1rem; border: 2px dashed var(--borde-fuerte); border-radius: 14px; text-align: center; color: var(--texto-suave); background: center / contain no-repeat; transition: border-color .2s; }
+.vista-comprobante i { font-size: 1.6rem; color: var(--primario); }
+.vista-comprobante.con-foto { min-height: 220px; border-style: solid; border-color: var(--primario); }
+.vista-comprobante.con-foto i { display: none; }
+.vista-comprobante.con-foto span { background: rgba(13, 27, 42, .85); padding: .3rem .7rem; border-radius: 99px; align-self: end; font-size: .8rem; }
+.subir-comprobante:hover .vista-comprobante { border-color: var(--primario); }
+
+/* Condiciones del servicio (reserva y Mi evento) */
+.clausulas ul { padding-left: 1.1rem; display: grid; gap: .4rem; font-size: .86rem; color: var(--texto-suave); }
+.clausulas summary { cursor: pointer; font-weight: 600; margin-bottom: .5rem; }
+details.clausulas { margin-bottom: .8rem; }

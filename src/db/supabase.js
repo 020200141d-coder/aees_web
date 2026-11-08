@@ -89,6 +89,25 @@ module.exports = {
     return cliente.storage.from('fotos').getPublicUrl(nombre).data.publicUrl;
   },
 
+  // Archivos PRIVADOS (comprobantes de pago): bucket "comprobantes" SIN acceso
+  // público. Solo el servidor (con la service key) los lee para mostrarlos en el panel.
+  async guardarPrivado(nombre, buffer, tipo) {
+    const subir = () => cliente.storage.from('comprobantes').upload(nombre, buffer, { contentType: tipo, upsert: false });
+    let r = await subir();
+    if (r.error && /bucket not found/i.test(r.error.message)) {
+      revisar(await cliente.storage.createBucket('comprobantes', { public: false }));
+      r = await subir();
+    }
+    revisar(r);
+    return nombre;
+  },
+
+  async leerPrivado(nombre) {
+    const { data, error } = await cliente.storage.from('comprobantes').download(nombre);
+    if (error || !data) return null;
+    return Buffer.from(await data.arrayBuffer());
+  },
+
   // upsert = inserta lo nuevo y actualiza lo que ya existe (por id).
   // No borra filas que no estén en el respaldo: restaurar nunca destruye datos.
   async importar(respaldo) {

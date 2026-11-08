@@ -90,7 +90,11 @@
                 <label class="campo-simple">Celular<input name="celular" value="<%= usuario.celular || '' %>" inputmode="tel" maxlength="12"><span class="campo-error"></span></label>
               </div>
               <label class="campo-simple">Correo (opcional)<input name="correo" type="email" value="<%= usuario.email || '' %>" maxlength="120"><span class="campo-error"></span></label>
-              <label class="casilla"><input type="checkbox" name="acepta"> Acepto que AeeS Acústico use mis datos solo para gestionar esta reserva (Ley 29733 de Protección de Datos Personales).</label>
+              <details class="clausulas" open>
+                <summary>Condiciones del servicio</summary>
+                <ul><% negocio.clausulas.forEach(c => { %><li><%= c %></li><% }) %></ul>
+              </details>
+              <label class="casilla"><input type="checkbox" name="acepta"> Acepto las condiciones del servicio y que AeeS Acústico use mis datos solo para gestionar esta reserva (Ley 29733 de Protección de Datos Personales).</label>
               <span class="campo-error" data-error="acepta" style="color:var(--no-disponible);font-size:.8rem"></span>
               <button type="submit" class="btn btn-primario btn-bloque magnetico">
                 <span class="btn-texto"><i class="fa-solid fa-lock"></i> Reservar y pagar adelanto</span>

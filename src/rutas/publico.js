@@ -69,13 +69,17 @@ router.get('/reservas/:codigo', requiereCliente, a(async (req, res, next) => {
 router.post('/reservas/:codigo/reunion', requiereCliente, a(async (req, res, next) => {
   const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
   if (!r || r.usuario_id !== req.usuario.id) return next();
+  if (r.reunion?.agendada_por === 'admin') {
+    req.flash('aviso', 'AeeS ya agendó tu reunión. Si necesitas cambiarla, escríbenos por WhatsApp.');
+    return res.redirect(`/reservas/${r.codigo}`);
+  }
   const { fecha, hora, modalidad } = req.body;
   const valida = /^\d{4}-\d{2}-\d{2}$/.test(fecha) && /^\d{2}:\d{2}$/.test(hora) && ['videollamada', 'presencial', 'llamada'].includes(modalidad);
   if (!valida || fecha < hoyLima() || fecha > r.fecha_evento) {
     req.flash('error', 'Elige una fecha entre hoy y el día del evento, una hora y la modalidad.');
   } else {
     await db.actualizar('reservas', r.id, { reunion: { fecha, hora, modalidad, solicitada_en: new Date().toISOString() } });
-    req.flash('exito', 'Reunión solicitada. Te confirmamos el horario por WhatsApp.');
+    req.flash('exito', 'Horario propuesto. Te confirmamos la reunión o llamada por WhatsApp.');
   }
   res.redirect(`/reservas/${r.codigo}`);
 }));

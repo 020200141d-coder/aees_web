@@ -450,11 +450,32 @@ router.get('/reservas/:codigo', soloAdmin, a(async (req, res, next) => {
 router.post('/reservas/:codigo/estado', soloAdmin, a(async (req, res, next) => {
   const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
   if (!r || !ESTADOS_RESERVA[req.body.estado]) return next();
+  // Regla del negocio: el evento se confirma en la reunión o llamada que agenda AeeS.
+  if (req.body.estado === 'confirmada' && r.reunion?.agendada_por !== 'admin') {
+    req.flash('error', 'Primero agenda la reunión o llamada de confirmación con el cliente (sección "Reunión o llamada").');
+    return res.redirect(`/admin/reservas/${r.codigo}`);
+  }
   const cambios = { estado: req.body.estado };
   if (req.body.estado !== 'pendiente_pago') cambios.expira_en = null;
   await db.actualizar('reservas', r.id, cambios);
   req.flash('exito', `Reserva ${r.codigo}: ${ESTADOS_RESERVA[req.body.estado]}.`);
   res.redirect(req.body.volver ? volverSeguro(req.body.volver) : `/admin/reservas/${r.codigo}`);
+}));
+
+// Agendar la reunión o llamada de confirmación (la pone el admin o el dueño).
+// Si el cliente propuso un horario, aquí se acepta o se cambia.
+router.post('/reservas/:codigo/reunion', soloAdmin, a(async (req, res, next) => {
+  const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
+  if (!r) return next();
+  const { fecha, hora, modalidad } = req.body;
+  const valida = /^\d{4}-\d{2}-\d{2}$/.test(fecha) && /^\d{2}:\d{2}$/.test(hora) && ['videollamada', 'presencial', 'llamada'].includes(modalidad);
+  if (!valida || fecha > r.fecha_evento) {
+    req.flash('error', 'Elige una fecha (hasta el día del evento), la hora y la modalidad.');
+  } else {
+    await db.actualizar('reservas', r.id, { reunion: { ...(r.reunion || {}), fecha, hora, modalidad, nota: texto(req.body.nota, 200), agendada_por: 'admin', agendada_por_email: req.usuario.email, agendada_en: new Date().toISOString() } });
+    req.flash('exito', 'Reunión agendada. Avísale al cliente por WhatsApp.');
+  }
+  res.redirect(`/admin/reservas/${r.codigo}`);
 }));
 
 router.post('/reservas/:codigo/notas', soloAdmin, a(async (req, res, next) => {
@@ -513,6 +534,15 @@ router.post('/reservas/:codigo/pago-manual', soloAdmin, a(async (req, res, next)
 }));
 
 // Aprobar o rechazar un Yape informado por el cliente (tras revisarlo en la app Yape).
+router.get('/pagos/:id/comprobante', soloAdmin, a(async (req, res, next) => {
+  const p = await db.obtener('pagos', req.params.id);
+  const archivo = p?.detalle?.comprobante && await db.leerPrivado(p.detalle.comprobante);
+  if (!archivo) return next();
+  res.setHeader('Content-Type', p.detalle.tipo_foto || 'image/webp');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(archivo);
+}));
+
 router.post('/pagos/:id/:accion', soloAdmin, a(async (req, res, next) => {
   const p = await db.obtener('pagos', req.params.id);
   if (!p || !['aprobar', 'rechazar'].includes(req.params.accion)) return next();
@@ -625,7 +655,10 @@ router.post('/ajustes/negocio', soloAdmin, a(async (req, res) => {
     horario: texto(b.horario, 80),
     redes: { instagram: urlImagen(b.instagram) ?? '', facebook: urlImagen(b.facebook) ?? '', tiktok: urlImagen(b.tiktok) ?? '' },
     almacen: { lat, lng, direccion: texto(b.almacen_direccion, 160) },
-    yape: { numero: String(b.yape_numero || '').replace(/\D/g, '').slice(0, 9), titular: texto(b.yape_titular, 80), qr_url: urlImagen(b.yape_qr) || '' }
+    yape: { numero: String(b.yape_numero || '').replace(/\D/g, '').slice(0, 9), titular: texto(b.yape_titular, 80), qr_url: urlImagen(b.yape_qr) || '' },
+    plin: { numero: String(b.plin_numero || '').replace(/\D/g, '').slice(0, 9), titular: texto(b.plin_titular, 80), qr_url: urlImagen(b.plin_qr) || '' },
+    // Una condición por línea. Vacío = se usan las condiciones por defecto (servicios/negocio.js).
+    clausulas: String(b.clausulas || '').split(/\r?\n/).map(l => texto(l, 300)).filter(l => l.length > 3).slice(0, 12)
   });
   negocio.invalidar();
   req.flash('exito', 'Datos del negocio guardados.');

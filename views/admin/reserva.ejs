@@ -85,7 +85,30 @@
       <p><b><%= dc.nombre %></b></p>
       <p class="suave">DNI <%= dc.dni %> · <i class="fa-brands fa-whatsapp"></i> <%= dc.celular %><%= dc.correo ? ` · ${dc.correo}` : '' %></p>
       <% if (cliente) { %><p class="suave" style="font-size:.8rem">Cuenta: <%= cliente.email || cliente.celular %></p><% } %>
-      <% if (r.reunion) { %><div class="aviso aviso-ok" style="margin-top:.8rem"><i class="fa-solid fa-handshake"></i>Reunión pedida: <b><%= r.reunion.fecha %> <%= r.reunion.hora %></b> (<%= r.reunion.modalidad %>)</div><% } %>
+    </section>
+
+    <%# Reunión o llamada de confirmación: la agenda el admin o el dueño. Sin ella no se puede pasar a "Confirmada". %>
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-handshake"></i> Reunión o llamada</h2>
+      <% if (r.reunion?.agendada_por === 'admin') { %>
+        <div class="aviso aviso-ok" style="margin-bottom:.8rem"><i class="fa-solid fa-calendar-check"></i>Agendada: <b><%= r.reunion.fecha %> <%= r.reunion.hora %></b> (<%= r.reunion.modalidad %>)<%= r.reunion.nota ? ` · ${r.reunion.nota}` : '' %></div>
+      <% } else if (r.reunion) { %>
+        <div class="aviso" style="margin-bottom:.8rem"><i class="fa-solid fa-hourglass-half"></i>El cliente propuso: <b><%= r.reunion.fecha %> <%= r.reunion.hora %></b> (<%= r.reunion.modalidad %>). Acéptalo o cámbialo:</div>
+      <% } else { %>
+        <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">Confirma con el cliente los equipos, el lugar, la energía y la protección ante el clima. El evento pasa a "Confirmada" después de esta reunión.</p>
+      <% } %>
+      <form method="post" action="/admin/reservas/<%= r.codigo %>/reunion" style="display:grid;gap:.6rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <div class="form-rejilla">
+          <label class="campo-simple">Fecha<input type="date" name="fecha" max="<%= r.fecha_evento %>" value="<%= r.reunion?.fecha || '' %>" required></label>
+          <label class="campo-simple">Hora<input type="time" name="hora" value="<%= r.reunion?.hora || '' %>" required></label>
+          <label class="campo-simple">Modalidad
+            <select name="modalidad"><% [['llamada', 'Llamada'], ['videollamada', 'Videollamada por WhatsApp'], ['presencial', 'Presencial / visita al lugar']].forEach(([v, t]) => { %><option value="<%= v %>" <%= r.reunion?.modalidad === v ? 'selected' : '' %>><%= t %></option><% }) %></select>
+          </label>
+          <label class="campo-simple">Nota para el cliente<input name="nota" maxlength="200" value="<%= r.reunion?.nota || '' %>" placeholder="Ej.: llevar plano del local"></label>
+        </div>
+        <button class="btn btn-primario btn-sm" style="justify-self:start"><%= r.reunion?.agendada_por === 'admin' ? 'Cambiar horario' : 'Agendar' %></button>
+      </form>
     </section>
 
     <section class="tarjeta">
@@ -106,7 +129,8 @@
       <div class="lista-agenda">
         <% pagos.forEach(p => { %>
           <div class="mensaje">
-            <b><%= { mercadopago: 'Mercado Pago', yape: 'Yape / manual', simulado: 'Simulado' }[p.metodo] %> · <%= soles(p.monto) %></b>
+            <b><%= p.metodo === 'yape' ? (p.detalle?.app === 'plin' ? 'Plin' : p.detalle?.comprobante ? 'Yape' : 'Yape / manual') : { mercadopago: 'Mercado Pago', simulado: 'Simulado' }[p.metodo] %> · <%= soles(p.monto) %></b>
+            <% if (p.detalle?.comprobante) { %><a href="/admin/pagos/<%= p.id %>/comprobante" target="_blank" rel="noopener" class="comprobante-mini" title="Abrir el comprobante"><img src="/admin/pagos/<%= p.id %>/comprobante" alt="Comprobante de pago" loading="lazy"></a><% } %>
             <small class="suave">Ref. <%= p.referencia %> · <%= new Date(p.creado_en).toLocaleString('es-PE', { timeZone: 'America/Lima' }) %> · <b style="color:<%= p.estado === 'aprobado' ? 'var(--disponible)' : p.estado === 'rechazado' ? 'var(--no-disponible)' : 'var(--primario)' %>"><%= p.estado %></b></small>
             <% if (p.estado === 'pendiente') { %>
               <div class="mensaje-pie">

@@ -82,7 +82,9 @@ const RUTAS_PESADAS = ['/admin/fotos', '/admin/respaldo/restaurar'];
 const jsonNormal = express.json({ limit: '200kb' });
 const jsonGrande = express.json({ limit: '12mb' });
 app.use(express.urlencoded({ extended: true, limit: '200kb' }));
-app.use((req, res, next) => (RUTAS_PESADAS.includes(req.path) ? jsonGrande : jsonNormal)(req, res, next));
+// El comprobante de pago (Yape/Plin) también llega como foto en JSON.
+const esPesada = p => RUTAS_PESADAS.includes(p) || /^\/pagos\/[A-Z0-9-]+\/yape$/i.test(p);
+app.use((req, res, next) => (esPesada(req.path) ? jsonGrande : jsonNormal)(req, res, next));
 
 // ── 4. Sesión, CSRF, usuario y datos comunes ─────────────────────────────────
 // cookie-session guarda la sesión cifrada/firmada en la propia cookie: no

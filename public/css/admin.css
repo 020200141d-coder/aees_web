@@ -118,3 +118,7 @@ body.admin { background: #0a1522; font-size: 0.94rem; }
   .calendario .dia { min-height: 54px; }
   .calendario .evento { font-size: 0; height: 6px; padding: 0; }
 }
+
+/* Miniatura del comprobante de Yape/Plin (se abre en grande al tocarla). */
+.comprobante-mini { display: inline-block; margin: .4rem 0; }
+.comprobante-mini img { width: 120px; max-height: 200px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--borde); }

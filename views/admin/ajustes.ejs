@@ -36,6 +36,17 @@
     <label class="campo-simple">Titular<input name="yape_titular" value="<%= n.yape?.titular %>"></label>
     <%- include('_foto', { nombre: 'yape_qr', valor: n.yape?.qr_url, error: null, formato: '1:1' }) %>
   </div>
+  <h2 style="margin-top:1.4rem"><i class="fa-solid fa-mobile-screen" style="color:#00b4c5"></i> Plin <small class="suave" style="font-size:.8rem">(opcional)</small></h2>
+  <div class="form-rejilla">
+    <label class="campo-simple">Número Plin<input name="plin_numero" value="<%= n.plin?.numero %>" maxlength="9"></label>
+    <label class="campo-simple">Titular<input name="plin_titular" value="<%= n.plin?.titular %>"></label>
+    <%- include('_foto', { nombre: 'plin_qr', valor: n.plin?.qr_url, error: null, formato: '1:1' }) %>
+  </div>
+  <h2 style="margin-top:1.4rem"><i class="fa-solid fa-file-contract"></i> Condiciones del servicio</h2>
+  <label class="campo-simple ancho">Una condición por línea (el cliente las acepta al reservar)
+    <textarea name="clausulas" rows="5"><%= (n.clausulas || []).join('\n') %></textarea>
+    <small class="ayuda">Si lo dejas vacío se usan las condiciones por defecto: energía eléctrica, protección ante lluvia y sol, y confirmación en la reunión o llamada.</small>
+  </label>
   <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar datos del negocio</button></div>
 </form>
 

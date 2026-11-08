@@ -148,6 +148,21 @@ module.exports = {
     return `/uploads/${nombre}`;
   },
 
+  // Archivos PRIVADOS (comprobantes de pago): fuera de public/, así nadie los
+  // abre con un enlace; solo el panel los entrega (GET /admin/pagos/:id/comprobante).
+  async guardarPrivado(nombre, buffer) {
+    const carpeta = process.env.VERCEL ? path.join(os.tmpdir(), 'comprobantes') : path.join(RAIZ, 'data', 'comprobantes');
+    fs.mkdirSync(carpeta, { recursive: true });
+    fs.writeFileSync(path.join(carpeta, path.basename(nombre)), buffer);
+    return nombre;
+  },
+
+  async leerPrivado(nombre) {
+    const carpeta = process.env.VERCEL ? path.join(os.tmpdir(), 'comprobantes') : path.join(RAIZ, 'data', 'comprobantes');
+    const ruta = path.join(carpeta, path.basename(nombre));
+    return fs.existsSync(ruta) ? fs.readFileSync(ruta) : null;
+  },
+
   // Reemplaza todas las tablas que vengan en el respaldo; las demás quedan igual.
   async importar(respaldo) {
     const datos = cargar();

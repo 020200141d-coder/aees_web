@@ -4,7 +4,8 @@
 //   POST /pagos/:codigo/mercadopago   crea la preferencia y redirige a Mercado Pago
 //   GET  /pagos/retorno               Mercado Pago vuelve aquí (se verifica el pago)
 //   POST /pagos/mercadopago/webhook   aviso servidor-a-servidor de Mercado Pago
-//   POST /pagos/:codigo/yape          el cliente informa su n.º de operación Yape
+//   POST /pagos/:codigo/yape          el cliente paga con Yape o Plin: sube la foto
+//                                     del comprobante + n.º de operación (JSON)
 //   POST /pagos/:codigo/simular       solo desarrollo: aprueba el adelanto
 // ============================================================================
 
@@ -12,7 +13,11 @@ const express = require('express');
 const db = require('../db');
 const pagos = require('../servicios/pagos');
 const reservas = require('../servicios/reservas');
+const crypto = require('node:crypto');
 const { requiereCliente } = require('../middleware/auth');
+const { limitar } = require('../lib/seguridad');
+const { soles } = require('../lib/util');
+const negocio = require('../servicios/negocio');
 
 const router = express.Router();
 const a = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -74,16 +79,53 @@ router.post('/mercadopago/webhook', a(async (req, res) => {
   res.sendStatus(200);
 }));
 
-router.post('/:codigo/yape', requiereCliente, a(async (req, res) => {
+// ── Yape o Plin ─────────────────────────────────────────────────────────────
+// El cliente escanea el QR, paga y aquí envía (por fetch, en JSON):
+//   { metodo: 'yape'|'plin', operacion: '12345678', foto: 'data:image/webp;base64,...' }
+// La foto ya llega reducida y en WebP (public/js/reserva.js). Se guarda en un
+// lugar PRIVADO (no es una foto pública: tiene nombres y montos). El pago queda
+// "pendiente" hasta que el admin compara la foto y el n.º de operación con su
+// Yape/Plin y lo aprueba en el panel.
+// La respuesta trae el enlace de WhatsApp con el mensaje ya escrito para avisar al negocio.
+const limiteComprobante = limitar({ clave: 'comprobante', max: 6, ventanaMin: 30, mensaje: 'Enviaste varios comprobantes seguidos. Escríbenos por WhatsApp.' });
+const TIPOS_COMPROBANTE = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
+
+function mensajeWhatsApp(r, { metodo, operacion, monto }) {
+  return `Hola AeeS, pagué el adelanto de mi reserva ${r.codigo} (${r.fecha_evento}) por ${soles(monto)} con ${metodo === 'plin' ? 'Plin' : 'Yape'}. N.º de operación: ${operacion}. Ya subí la foto del comprobante en la web.`;
+}
+
+router.post('/:codigo/yape', requiereCliente, limiteComprobante, a(async (req, res) => {
   const r = await reservaPropia(req);
-  const operacion = String(req.body.operacion || '').replace(/\D/g, '');
-  if (!/^\d{6,12}$/.test(operacion)) {
-    req.flash('error', 'El número de operación de Yape tiene entre 6 y 12 dígitos (lo ves en el detalle del yapeo).');
-    return res.redirect(`/reservas/${r.codigo}`);
-  }
-  await reservas.registrarPago(r, { metodo: 'yape', monto: porPagar(r), referencia: operacion, estado: 'pendiente', detalle: { celular_yape: String(req.body.celular || '').replace(/\D/g, '') } });
-  req.flash('exito', 'Recibimos tu número de operación. Lo verificamos y te confirmamos por WhatsApp (normalmente en menos de 1 hora).');
-  res.redirect(`/reservas/${r.codigo}`);
+  const metodo = req.body?.metodo === 'plin' ? 'plin' : 'yape';
+  const operacion = String(req.body?.operacion || '').replace(/\D/g, '');
+  const foto = /^data:(image\/(?:webp|jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body?.foto || ''));
+  const error = msg => res.status(400).json({ ok: false, error: msg });
+
+  if (r.estado !== 'pendiente_pago') return error('Esta reserva ya no tiene un adelanto pendiente.');
+  if (!/^\d{6,12}$/.test(operacion)) return error(`El número de operación tiene entre 6 y 12 dígitos (lo ves en el detalle del pago en ${metodo === 'plin' ? 'Plin' : 'Yape'}).`);
+  if (!foto) return error('Sube la foto o captura del comprobante (JPG, PNG o WebP).');
+  const buffer = Buffer.from(foto[2], 'base64');
+  if (buffer.length > 3 * 1024 * 1024) return error('La foto pesa más de 3 MB. Toma una captura de pantalla del comprobante.');
+
+  const pagosReserva = await db.listar('pagos', { filtro: { reserva_id: r.id } });
+  if (pagosReserva.some(p => p.metodo === 'yape' && p.estado === 'pendiente')) return error('Ya recibimos un comprobante y lo estamos revisando.');
+  if (pagosReserva.some(p => p.referencia === operacion && p.metodo === 'yape')) return error('Ese número de operación ya fue enviado.');
+
+  const nombre = `${r.codigo}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${TIPOS_COMPROBANTE[foto[1]]}`;
+  await db.guardarPrivado(nombre, buffer, foto[1]);
+  const monto = porPagar(r);
+  await reservas.registrarPago(r, {
+    // En la base el método es 'yape' para los dos (la columna solo acepta mercadopago/yape/simulado);
+    // la app que usó el cliente queda en detalle.app.
+    metodo: 'yape', monto, referencia: operacion, estado: 'pendiente',
+    detalle: { app: metodo, comprobante: nombre, tipo_foto: foto[1], enviado_en: new Date().toISOString() }
+  });
+  const { negocio: n } = await negocio.obtener();
+  res.json({
+    ok: true,
+    mensaje: 'Recibimos tu comprobante. Lo verificamos y te confirmamos por WhatsApp.',
+    whatsapp: `https://wa.me/${n.whatsapp}?text=${encodeURIComponent(mensajeWhatsApp(r, { metodo, operacion, monto }))}`
+  });
 }));
 
 router.post('/:codigo/simular', requiereCliente, a(async (req, res) => {
@@ -95,3 +137,4 @@ router.post('/:codigo/simular', requiereCliente, a(async (req, res) => {
 }));
 
 module.exports = router;
+module.exports.mensajeWhatsApp = mensajeWhatsApp;
