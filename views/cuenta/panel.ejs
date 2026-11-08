@@ -1,4 +1,11 @@
-<%# cuenta/panel.ejs — "Mi cuenta": reservas del cliente con su estado. %>
+<%#
+  cuenta/panel.ejs — "Mi cuenta" del cliente habitual:
+   • tarjeta de puntos (disponibles, por ganar, cuánto falta para el próximo canje),
+   • aviso de cliente habitual (descuento automático),
+   • reservas con su estado y el botón "Repetir", que carga esa misma reserva
+     en "Mi evento" (public/js/cuenta.js) para elegir otra fecha.
+  Los puntos se calculan en src/servicios/puntos.js a partir de las reservas.
+%>
 <% const { soles, fechaLarga, ESTADOS_RESERVA } = util; %>
 <%- include('../partials/head') %>
 <body>
@@ -9,11 +16,37 @@
       <div>
         <span class="seccion-num">Mi cuenta</span>
         <h1>Hola, <span class="texto-acento"><%= usuario.nombre.split(' ')[0] %></span></h1>
-        <p><%= usuario.email || usuario.celular %></p>
+        <p><%= usuario.email || '' %><%= usuario.email && usuario.celular ? ' · ' : '' %><%= usuario.celular || '' %></p>
       </div>
       <form method="post" action="/cuenta/salir"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button></form>
     </header>
     <%- include('../partials/flash') %>
+
+    <div class="cuenta-resumen">
+      <section class="panel tarjeta-puntos">
+        <h2><i class="fa-solid fa-star"></i> Mis puntos</h2>
+        <div class="puntos-numero"><b><%= saldo.disponible %></b><span>disponibles</span></div>
+        <% const avance = Math.min(100, Math.round(((saldo.disponible % saldo.canje_puntos) / saldo.canje_puntos) * 100)); %>
+        <% if (saldo.canjes_posibles > 0) { %>
+          <p>Puedes canjear <b><%= saldo.canjes_posibles * saldo.canje_puntos %> puntos = <%= soles(saldo.canjes_posibles * saldo.canje_soles) %></b> de descuento en tu próxima reserva.</p>
+        <% } else { %>
+          <div class="barra-puntos" role="progressbar" aria-valuenow="<%= avance %>" aria-valuemin="0" aria-valuemax="100"><span style="width:<%= avance %>%"></span></div>
+          <p>Te faltan <b><%= saldo.faltan_para_canje %> punto<%= saldo.faltan_para_canje === 1 ? '' : 's' %></b> para <%= soles(saldo.canje_soles) %> de descuento.</p>
+        <% } %>
+        <% if (saldo.por_ganar) { %><p class="suave">+<%= saldo.por_ganar %> por ganar cuando se realicen tus eventos confirmados.</p><% } %>
+        <small class="suave">1 punto por cada <%= soles(saldo.cada_soles) %> en eventos realizados · <%= saldo.canje_puntos %> puntos = <%= soles(saldo.canje_soles) %>.</small>
+      </section>
+
+      <section class="panel">
+        <h2><i class="fa-solid fa-crown"></i> <%= frecuente ? 'Cliente habitual' : 'Hazte cliente habitual' %></h2>
+        <% if (frecuente) { %>
+          <p>Tienes <b><%= reglas.descuento_frecuente_pct %>% de descuento</b> automático en tus reservas. Gracias por confiar en AeeS.</p>
+        <% } else { %>
+          <p>Con <%= reglas.reservas_para_frecuente %> eventos pagados obtienes <b><%= reglas.descuento_frecuente_pct %>% de descuento</b> automático en todas tus reservas.</p>
+        <% } %>
+        <a href="/asistente" class="btn btn-primario btn-sm" style="margin-top:.6rem"><i class="fa-solid fa-wand-magic-sparkles"></i> Armar un evento nuevo</a>
+      </section>
+    </div>
 
     <section class="panel">
       <h2 style="font-size:1.4rem;margin-bottom:1rem">Mis reservas</h2>
@@ -29,9 +62,12 @@
                 <td><b><%= r.codigo %></b></td>
                 <td><%= fechaLarga(r.fecha_evento) %></td>
                 <td><%= (r.lugar || '').split(',')[0] %></td>
-                <td><%= soles(r.total) %></td>
+                <td><%= soles(r.total) %><% if (r.encuesta?.puntos_canjeados) { %><br><small class="suave">usaste <%= r.encuesta.puntos_canjeados %> puntos</small><% } %></td>
                 <td><span class="estado-reserva estado-<%= r.estado %>"><%= ESTADOS_RESERVA[r.estado] %></span></td>
-                <td><a class="btn btn-ghost btn-sm" href="/reservas/<%= r.codigo %>">Ver</a></td>
+                <td style="white-space:nowrap">
+                  <a class="btn btn-ghost btn-sm" href="/reservas/<%= r.codigo %>">Ver</a>
+                  <button type="button" class="btn btn-ghost btn-sm" data-repetir="<%= r.codigo %>" title="Cargar estos equipos en Mi evento para otra fecha"><i class="fa-solid fa-rotate-right"></i> Repetir</button>
+                </td>
               </tr>
             <% }) %>
           </tbody>
@@ -41,4 +77,6 @@
     </section>
   </div>
 </main>
-<%- include('../partials/footer') %>
+<%# Carritos listos para "Repetir" (los arma src/rutas/cuenta.js). %>
+<script type="application/json" id="datos-repetir"><%- JSON.stringify(repetir).replace(/</g, '\\u003c') %></script>
+<%- include('../partials/footer', { scripts: ['/js/cuenta.js'] }) %>

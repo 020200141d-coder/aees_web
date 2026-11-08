@@ -649,12 +649,17 @@ router.post('/ajustes/reglas', soloAdmin, a(async (req, res) => {
     vehiculos_transporte_gratis: vehiculosGratis,
     km_transporte_gratis: numero(b.km_transporte_gratis, NaN),
     altura_max_gratis_m: entero(b.altura_max_gratis_m, NaN),
-    recargo_sin_acceso: numero(b.recargo_sin_acceso, NaN)
+    recargo_sin_acceso: numero(b.recargo_sin_acceso, NaN),
+    // Puntos por frecuencia (ver src/servicios/puntos.js)
+    puntos_cada_soles: numero(b.puntos_cada_soles, NaN),
+    puntos_canje: entero(b.puntos_canje, NaN),
+    soles_canje: numero(b.soles_canje, NaN)
   };
   delete r.factor_jornada_extra; delete r.tecnico_por_jornada; // nombres de la versión anterior
   const ok = r.adelanto_pct >= 10 && r.adelanto_pct <= 100 && r.horas_bloqueo >= 1 && r.horas_bloqueo <= 168 && r.horas_jornada >= 1 && r.horas_jornada <= 12 &&
     r.factor_hora_extra >= 0 && r.factor_hora_extra <= 2 && r.tecnico_por_evento >= 0 && r.descuento_frecuente_pct >= 0 && r.descuento_frecuente_pct <= 50 && r.reservas_para_frecuente >= 1 &&
-    r.km_transporte_gratis >= 0 && r.km_transporte_gratis <= 200 && r.altura_max_gratis_m >= 0 && r.altura_max_gratis_m <= 6000 && r.recargo_sin_acceso >= 0;
+    r.km_transporte_gratis >= 0 && r.km_transporte_gratis <= 200 && r.altura_max_gratis_m >= 0 && r.altura_max_gratis_m <= 6000 && r.recargo_sin_acceso >= 0 &&
+    r.puntos_cada_soles >= 1 && r.puntos_canje >= 1 && r.soles_canje >= 0;
   if (!ok) { req.flash('error', 'Revisa los valores: adelanto 10–100 %, bloqueo 1–168 h, horas del evento 1–12, factor 0–2, descuento 0–50 %, km 0–200, altura 0–6000 m.'); return res.redirect('/admin/ajustes#reglas'); }
   await db.guardarAjuste('reglas', r);
   req.flash('exito', 'Reglas de precios guardadas.');

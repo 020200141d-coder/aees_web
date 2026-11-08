@@ -48,6 +48,8 @@ function normalizarCarrito(c = {}) {
     espacio: c.espacio === 'exterior' ? 'exterior' : 'interior',
     lugar: Number.isFinite(lat) && Number.isFinite(lng) ? { texto: texto(c.lugar.texto, 200), lat, lng } : null,
     con_tecnico: c.con_tecnico === true,
+    // Canjes de puntos que el cliente quiere usar (cada canje = 5 puntos → S/ 50 por defecto).
+    canje_puntos: Math.min(20, Math.max(0, Math.floor(numero(c.canje_puntos, 0)))),
     // ¿El vehículo llega hasta el mismo lugar del evento? null = no respondió.
     acceso_vehicular: c.acceso_vehicular === true || c.acceso_vehicular === 'si' ? true : c.acceso_vehicular === false || c.acceso_vehicular === 'no' ? false : null,
     encuesta: c.encuesta && typeof c.encuesta === 'object' ? JSON.parse(JSON.stringify(c.encuesta).slice(0, 4000)) : {},
@@ -85,7 +87,7 @@ async function preparar(carritoCrudo, { usuarioId, promoCodigo, excluirReservaId
 
   const cotizacion = await precios.cotizar({
     combo, adicionales, items: carrito.items, horas: carrito.horas, conTecnico: carrito.con_tecnico,
-    transporte: envio, promoCodigo, usuarioId
+    transporte: envio, promoCodigo, usuarioId, canjePuntos: carrito.canje_puntos, excluirReservaId
   }, mapa);
 
   return { carrito, combo, adicionales, mapa, expandidos, faltan, ruta, envio, cotizacion };
@@ -125,7 +127,8 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
     subtotal: cotizacion.subtotal,
     transporte: p.envio?.costo || 0,
     tecnico: cotizacion.tecnico,
-    descuento: cotizacion.descuento,
+    // Descuento total = promo o cliente frecuente + puntos canjeados (detalle en encuesta).
+    descuento: redondear(cotizacion.descuento + (cotizacion.puntos?.canje.descuento || 0)),
     total: cotizacion.total,
     adelanto_pct: cotizacion.adelanto_pct,
     adelanto: cotizacion.adelanto,
@@ -133,7 +136,7 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
     promo_codigo: cotizacion.promo?.codigo || null,
     expira_en: new Date(Date.now() + r.horas_bloqueo * 3600 * 1000).toISOString(),
     datos_cliente: datosCliente,
-    encuesta: { ...carrito.encuesta, acceso_vehicular: carrito.acceso_vehicular, horas_extra: cotizacion.horas_extra, transporte_detalle: p.envio ? { gratis: p.envio.gratis, tarifa: p.envio.tarifa, motivos: p.envio.motivos_cobro, recargo_sin_acceso: p.envio.recargo_sin_acceso, altura_m: p.envio.altura_m } : null, lineas: cotizacion.lineas, ruta: p.ruta ? { km: p.ruta.km, minutos: p.ruta.minutos, fuente: p.ruta.fuente, enlace_conductor: p.ruta.enlace_conductor } : null, carga: p.envio?.carga || null },
+    encuesta: { ...carrito.encuesta, puntos_canjeados: cotizacion.puntos?.canje.puntos || 0, puntos_descuento: cotizacion.puntos?.canje.descuento || 0, descuento_pct: cotizacion.descuento_pct, acceso_vehicular: carrito.acceso_vehicular, horas_extra: cotizacion.horas_extra, transporte_detalle: p.envio ? { gratis: p.envio.gratis, tarifa: p.envio.tarifa, motivos: p.envio.motivos_cobro, recargo_sin_acceso: p.envio.recargo_sin_acceso, altura_m: p.envio.altura_m } : null, lineas: cotizacion.lineas, ruta: p.ruta ? { km: p.ruta.km, minutos: p.ruta.minutos, fuente: p.ruta.fuente, enlace_conductor: p.ruta.enlace_conductor } : null, carga: p.envio?.carga || null },
     explicacion: carrito.explicacion || null,
     reunion: null,
     notas_admin: ''

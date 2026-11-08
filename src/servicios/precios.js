@@ -16,6 +16,7 @@
 
 const db = require('../db');
 const { redondear } = require('../lib/util');
+const puntos = require('./puntos');
 
 async function reglas() {
   return normalizarReglas({
@@ -34,7 +35,9 @@ const REGLAS_BASE = {
   // de altura_max_gratis_m (sin subir a los cerros) y con acceso vehicular.
   vehiculos_transporte_gratis: ['auto'], km_transporte_gratis: 15, altura_max_gratis_m: 3500,
   // Si el vehículo no llega hasta el lugar, el equipo se carga a mano el último tramo.
-  recargo_sin_acceso: 30
+  recargo_sin_acceso: 30,
+  // Puntos por frecuencia: 1 punto cada S/ 100; 5 puntos = S/ 50 de descuento.
+  puntos_cada_soles: 100, puntos_canje: 5, soles_canje: 50
 };
 
 // Antes las reglas eran por "jornadas" de 4 h. Si en la base quedaron esos
@@ -120,7 +123,8 @@ async function validarPromo(codigo, { frecuente }) {
 }
 
 // Cotización completa: equipos + técnico + transporte − descuento → total y adelanto.
-async function cotizar({ combo, adicionales, items, horas, conTecnico, transporte, promoCodigo, usuarioId }, mapa) {
+//  canjePuntos: cuántos canjes de puntos quiere usar el cliente (0 = ninguno).
+async function cotizar({ combo, adicionales, items, horas, conTecnico, transporte, promoCodigo, usuarioId, canjePuntos = 0, excluirReservaId }, mapa) {
   const r = await reglas();
   const base = subtotalEquipos({ combo, adicionales, items, horas }, mapa, r);
   // El técnico que opera el evento sigue la misma regla de horas que los equipos.
@@ -133,8 +137,13 @@ async function cotizar({ combo, adicionales, items, horas, conTecnico, transport
   const pct = Math.max(promo?.porcentaje || 0, frecuente ? r.descuento_frecuente_pct : 0);
   const descuento = redondear(base.subtotal * pct / 100);
 
-  const total = redondear(base.subtotal + tecnico + costoTransporte - descuento);
+  // Puntos: el descuento de los puntos se suma al de la promo o cliente frecuente.
+  const saldo = await puntos.saldo(usuarioId, r, { excluirReservaId });
+  const canje = puntos.aplicarCanje(canjePuntos, saldo, base.subtotal + tecnico + costoTransporte - descuento);
+
+  const total = redondear(base.subtotal + tecnico + costoTransporte - descuento - canje.descuento);
   return {
+    puntos: saldo ? { ...saldo, canje } : null,
     ...base,
     tecnico,
     transporte: transporte || null,

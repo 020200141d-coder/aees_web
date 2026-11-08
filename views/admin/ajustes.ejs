@@ -51,6 +51,13 @@
     <label class="campo-simple">Descuento cliente frecuente (%)<input name="descuento_frecuente_pct" type="number" min="0" max="50" value="<%= reglas.descuento_frecuente_pct %>"></label>
     <label class="campo-simple">Reservas pagadas para ser frecuente<input name="reservas_para_frecuente" type="number" min="1" value="<%= reglas.reservas_para_frecuente %>"></label>
   </div>
+  <%# Puntos del cliente habitual: se calculan con las reservas completadas (src/servicios/puntos.js). %>
+  <h3 style="margin-top:1.4rem;font-size:1rem"><i class="fa-solid fa-star"></i> Puntos por frecuencia</h3>
+  <div class="form-rejilla">
+    <label class="campo-simple">1 punto por cada (S/)<input name="puntos_cada_soles" type="number" min="1" value="<%= reglas.puntos_cada_soles %>"><small class="ayuda">De eventos realizados (completados).</small></label>
+    <label class="campo-simple">Puntos que se canjean juntos<input name="puntos_canje" type="number" min="1" value="<%= reglas.puntos_canje %>"></label>
+    <label class="campo-simple">Descuento por canje (S/)<input name="soles_canje" type="number" min="0" value="<%= reglas.soles_canje %>"><small class="ayuda">Ej.: 5 puntos = S/ 50.</small></label>
+  </div>
   <%# Transporte incluido: el almacén (arriba, Latitud/Longitud) es el punto de partida de la ruta. %>
   <h3 style="margin-top:1.4rem;font-size:1rem"><i class="fa-solid fa-truck-fast"></i> Transporte incluido (paquetes pequeños y medianos)</h3>
   <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">No se cobra transporte si la carga entra en los vehículos marcados, el lugar está cerca, no está en un cerro y el vehículo llega hasta la puerta.</p>

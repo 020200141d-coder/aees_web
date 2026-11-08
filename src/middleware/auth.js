@@ -24,6 +24,7 @@ const { hashClave, verificarClave } = require('../lib/seguridad');
 const ROLES_PERSONAL = ['admin', 'publicador'];
 const INACTIVIDAD_MIN = 60;
 const DURACION_MAX_H = 12;
+const DIAS_CLIENTE = 180;
 const esPersonal = u => Boolean(u && ROLES_PERSONAL.includes(u.rol));
 
 function sesionPersonalVencida(req) {
@@ -44,7 +45,10 @@ async function cargarUsuario(req, res, next) {
         // Se cierra la sesión vencida; requiereStaff lo mandará al ingreso con el aviso.
         req.session = { csrf: req.session.csrf, aviso: 'Tu sesión se cerró por seguridad. Ingresa de nuevo.' };
       } else {
-        if (esPersonal(u)) {
+        if (!esPersonal(u)) {
+          // Cliente habitual: queda recordado 6 meses en su celular o PC (no tiene que volver a ingresar).
+          req.sessionOptions.maxAge = DIAS_CLIENTE * 24 * 3600 * 1000;
+        } else {
           req.sessionOptions.maxAge = null; // cookie de sesión: se borra al cerrar el navegador
           // Se renueva la marca como mucho una vez por minuto (cada renovación reescribe la cookie).
           if (Date.now() - req.session.visto > 60 * 1000) req.session.visto = Date.now();
@@ -145,6 +149,7 @@ async function asegurarAdminInicial() {
 }
 
 module.exports = {
+  DIAS_CLIENTE,
   cargarUsuario, requiereCliente, requiereStaff, requiereClave, claveVigente,
   iniciarSesionPersonal, asegurarAdminInicial, emailPrincipal, esPersonal, CONFIRMACION_MIN
 };

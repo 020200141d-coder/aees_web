@@ -220,3 +220,30 @@ test('si Gemini falla, se usa el intérprete por palabras clave', async () => {
     delete process.env.GEMINI_API_KEY;
   }
 });
+
+// ── Puntos por frecuencia (1 punto cada S/ 100 de eventos realizados; 5 puntos = S/ 50) ──
+const { calcularSaldo, aplicarCanje } = require('../src/servicios/puntos');
+const r0 = { puntos_cada_soles: 100, puntos_canje: 5, soles_canje: 50 };
+
+test('puntos: solo cuentan los eventos completados; los confirmados quedan "por ganar"', () => {
+  const s = calcularSaldo([
+    { id: 'a', estado: 'completada', total: 380 }, { id: 'b', estado: 'completada', total: 250 },
+    { id: 'c', estado: 'confirmada', total: 600 }, { id: 'd', estado: 'cancelada', total: 900 }
+  ], r0);
+  assert.equal(s.ganados, 6); // 630 / 100
+  assert.equal(s.por_ganar, 6);
+  assert.equal(s.canjes_posibles, 1);
+});
+
+test('puntos: lo canjeado se descuenta y vuelve si la reserva se cancela', () => {
+  const base = [{ id: 'a', estado: 'completada', total: 1000 }];
+  assert.equal(calcularSaldo([...base, { id: 'b', estado: 'adelanto_pagado', total: 300, encuesta: { puntos_canjeados: 5 } }], r0).disponible, 5);
+  assert.equal(calcularSaldo([...base, { id: 'b', estado: 'cancelada', total: 300, encuesta: { puntos_canjeados: 5 } }], r0).disponible, 10);
+});
+
+test('canje: no pasa del saldo ni deja el total en negativo', () => {
+  const s = calcularSaldo([{ id: 'a', estado: 'completada', total: 1500 }], r0); // 15 puntos = 3 canjes
+  assert.deepEqual(aplicarCanje(5, s, 1000), { canjes: 3, puntos: 15, descuento: 150 });
+  assert.deepEqual(aplicarCanje(3, s, 120), { canjes: 2, puntos: 10, descuento: 100 });
+  assert.deepEqual(aplicarCanje(0, s, 1000), { canjes: 0, puntos: 0, descuento: 0 });
+});

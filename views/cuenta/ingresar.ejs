@@ -1,8 +1,10 @@
 <%#
   cuenta/ingresar.ejs — registro / ingreso del cliente en un solo paso.
+  • Gmail + celular: POST /cuenta/ingresar. Si es nuevo, pide su nombre y crea la cuenta.
+    Si su celular tenía una cuenta antigua con PIN, pide el PIN una sola vez (datos.pedirPin).
   • Google: botón oficial de Google Identity Services (solo si hay GOOGLE_CLIENT_ID).
     El callback envía el token a POST /cuenta/google, que lo verifica con Google.
-  • Celular + PIN de 6 dígitos: POST /cuenta/celular. Si el celular es nuevo, se crea la cuenta.
+  Queda recordado 6 meses en el dispositivo (ver DIAS_CLIENTE en middleware/auth.js).
 %>
 <%- include('../partials/head') %>
 <body>
@@ -11,31 +13,36 @@
   <div class="contenedor ingreso">
     <header class="pagina-titulo" style="text-align:center">
       <span class="seccion-num">Tu cuenta</span>
-      <h1>Ingresa <span class="texto-acento">sin rodeos</span></h1>
-      <p style="margin:0 auto">Si es tu primera vez, se crea tu cuenta al instante. Solo pedimos DNI cuando reservas.</p>
+      <h1>Ingresa <span class="texto-acento">sin contraseñas</span></h1>
+      <p style="margin:0 auto">Solo tu Gmail y tu celular. Te recordamos en este dispositivo, sumas puntos con cada evento y reservas más rápido.</p>
     </header>
 
     <section class="panel">
       <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
 
-      <% if (googleClientId) { %>
-        <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup"></div>
-        <div style="display:grid;justify-items:center"><div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black" data-size="large" data-text="continue_with" data-locale="es"></div></div>
-      <% } else { %>
-        <p class="suave" style="text-align:center;font-size:.88rem"><i class="fa-brands fa-google"></i> El ingreso con Google se activa al configurar <code>GOOGLE_CLIENT_ID</code>.</p>
-      <% } %>
-
-      <div class="separador">o con tu celular</div>
-
-      <form method="post" action="/cuenta/celular" style="display:grid;gap:.9rem">
+      <form method="post" action="/cuenta/ingresar" style="display:grid;gap:.9rem">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <input type="hidden" name="volver" value="<%= volver %>">
-        <label class="campo-simple">Celular<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" value="<%= datos.celular || '' %>" autocomplete="tel" required></label>
-        <label class="campo-simple">PIN de 6 dígitos<input name="pin" type="password" inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required></label>
-        <label class="campo-simple">Tu nombre <small>(solo la primera vez)</small><input name="nombre" maxlength="80" value="<%= datos.nombre || '' %>" autocomplete="name"></label>
-        <button class="btn btn-primario btn-bloque magnetico"><i class="fa-solid fa-right-to-bracket"></i> Ingresar o crear cuenta</button>
+        <label class="campo-simple">Tu Gmail<input name="email" type="email" inputmode="email" maxlength="120" placeholder="tunombre@gmail.com" value="<%= datos.email || '' %>" autocomplete="email" required autofocus></label>
+        <label class="campo-simple">Celular (WhatsApp)<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" value="<%= datos.celular || '' %>" autocomplete="tel" required></label>
+        <% if (datos.pedirPin) { %>
+          <label class="campo-simple">PIN de tu cuenta anterior <small>(solo esta vez)</small><input name="pin" type="password" inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required></label>
+        <% } %>
+        <label class="campo-simple">Tu nombre <small>(solo la primera vez)</small><input name="nombre" maxlength="80" value="<%= datos.nombre || '' %>" autocomplete="name" <%= datos.nuevo ? 'required' : '' %>></label>
+        <button class="btn btn-primario btn-bloque magnetico"><i class="fa-solid fa-right-to-bracket"></i> Ingresar o crear mi cuenta</button>
       </form>
-      <p class="suave" style="font-size:.8rem;margin-top:1rem;text-align:center">¿Olvidaste tu PIN? Escríbenos por <a href="https://wa.me/<%= negocio.whatsapp %>" style="color:var(--primario)">WhatsApp</a> y lo restablecemos.</p>
+      <ul class="suave beneficios-cuenta">
+        <li><i class="fa-solid fa-star"></i> 1 punto por cada S/ 100; cada 5 puntos = S/ 50 de descuento.</li>
+        <li><i class="fa-solid fa-rotate-right"></i> Repite una reserva anterior con un clic.</li>
+        <li><i class="fa-solid fa-id-card"></i> Tus datos quedan guardados para la próxima reserva.</li>
+      </ul>
+
+      <% if (googleClientId) { %>
+        <div class="separador">o con Google</div>
+        <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup"></div>
+        <div style="display:grid;justify-items:center"><div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black" data-size="large" data-text="continue_with" data-locale="es"></div></div>
+      <% } %>
+      <p class="suave" style="font-size:.8rem;margin-top:1rem;text-align:center">¿Cambiaste de número? Escríbenos por <a href="https://wa.me/<%= negocio.whatsapp %>" style="color:var(--primario)">WhatsApp</a> y lo actualizamos.</p>
     </section>
   </div>
 </main>

@@ -674,3 +674,22 @@ body.cursor-hover .cursor-anillo { width: 60px; height: 60px; margin: -30px 0 0 
 /* Asistente: pregunta de acceso vehicular (paso del mapa). Sin el borde por defecto del fieldset. */
 .pregunta-acceso { border: 0; padding: 0; margin: 1.4rem 0 0; min-width: 0; }
 .pregunta-acceso legend { font-weight: 600; margin-bottom: .7rem; padding: 0; }
+
+/* ── Mi cuenta: puntos y cliente habitual ───────────────────────────────── */
+.cuenta-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.2rem; margin-bottom: 1.2rem; }
+.cuenta-resumen > * { min-width: 0; }
+.cuenta-resumen h2 { font-size: 1.15rem; margin-bottom: .8rem; }
+.cuenta-resumen h2 i { color: var(--primario); }
+.cuenta-resumen p { margin-bottom: .5rem; }
+.tarjeta-puntos { border-color: rgba(var(--primario-rgb), .45); }
+.puntos-numero { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .6rem; }
+.puntos-numero b { font-family: var(--f-titulo); font-size: 3rem; line-height: 1; color: var(--primario); }
+.barra-puntos { height: 10px; border-radius: 99px; background: var(--borde); overflow: hidden; margin: .4rem 0 .7rem; }
+.barra-puntos span { display: block; height: 100%; background: var(--primario); border-radius: inherit; transition: width .6s var(--ease); }
+.beneficios-cuenta { list-style: none; padding: 0; margin: 1.2rem 0 0; display: grid; gap: .45rem; font-size: .86rem; }
+.beneficios-cuenta i { color: var(--primario); width: 1.2em; }
+.puntos-canje { margin-top: .8rem; padding: .8rem; border: 1px dashed rgba(var(--primario-rgb), .5); border-radius: 12px; }
+
+/* El atributo hidden siempre oculta, aunque la clase del elemento tenga display:grid/flex
+   (antes el aviso de "evento vacío" se veía junto con el evento). */
+[hidden] { display: none !important; }

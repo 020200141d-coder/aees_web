@@ -1,22 +1,29 @@
 // ============================================================================
 //  src/rutas/cuenta.js — registro e ingreso de clientes, "sin rodeos"
 //
-//  Dos formas, y en ambas registrarse e ingresar es el MISMO paso:
-//   1. Google: el botón oficial (Google Identity Services) nos da un
-//      "ID token" firmado por Google. Lo validamos preguntándole a Google
-//      (endpoint tokeninfo) y comprobamos que fue emitido para NUESTRO
-//      GOOGLE_CLIENT_ID. Si el correo no existe, se crea la cuenta.
-//   2. Celular + PIN de 6 dígitos: si el celular no existe, se crea la cuenta
-//      con ese PIN; si existe, se verifica el PIN. El PIN se guarda con hash.
-//      (Más adelante se puede reemplazar el PIN por un código por WhatsApp.)
+//  Registrarse e ingresar es el MISMO paso:
+//   1. Gmail + celular (la forma principal, pedida por el negocio): el cliente
+//      habitual solo escribe su Gmail y su celular. Si es nuevo, se crea la
+//      cuenta con su nombre; si ya existe, el celular debe coincidir con el
+//      de ese Gmail. Queda recordado 6 meses en su dispositivo.
+//      Cuentas antiguas (celular + PIN): la primera vez se pide el PIN una sola
+//      vez para unirles el Gmail; después ya no se vuelve a pedir.
+//   2. Google (si hay GOOGLE_CLIENT_ID): botón oficial de Google; validamos el
+//      "ID token" con Google y que sea para NUESTRO GOOGLE_CLIENT_ID.
+//
+//  Ojo de seguridad: Gmail + celular no envía un código de verificación (eso
+//  cuesta dinero por SMS/WhatsApp). Para que nadie pruebe combinaciones, hay
+//  límite de intentos por IP, y el botón de Google sí verifica la identidad.
 //
 //  El DNI y demás datos se piden recién al reservar, no al registrarse.
 // ============================================================================
 
 const express = require('express');
 const db = require('../db');
-const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
-const { requiereCliente } = require('../middleware/auth');
+const { verificarClave, limitar } = require('../lib/seguridad');
+const precios = require('../servicios/precios');
+const puntos = require('../servicios/puntos');
+const { requiereCliente, DIAS_CLIENTE } = require('../middleware/auth');
 const { texto } = require('../lib/util');
 
 const router = express.Router();
@@ -51,39 +58,78 @@ router.post('/google', limiteLogin, a(async (req, res) => {
     u = await db.actualizar('usuarios', u.id, { google_sub: info.sub });
   }
   req.session.uid = u.id;
+  req.sessionOptions.maxAge = DIAS_CLIENTE * 24 * 3600 * 1000;
   res.json({ ok: true, volver: volverSeguro(req.body?.volver) });
 }));
 
-router.post('/celular', limiteLogin, a(async (req, res) => {
-  const celular = String(req.body.celular || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
-  const pin = String(req.body.pin || '');
+// Gmail (también @googlemail.com, que es lo mismo). Se guarda en minúsculas.
+const esGmail = e => /^[a-z0-9.+_-]+@(gmail|googlemail)\.com$/.test(e);
+const limpiarCelular = v => String(v || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
+// Para los mensajes: muestra el correo a medias (a•••z@gmail.com).
+const ocultarCorreo = e => e.replace(/^(.)(.*)(.)@/, (m, a, b, c) => `${a}${'•'.repeat(Math.min(b.length, 5))}${c}@`);
+
+router.post('/ingresar', limiteLogin, a(async (req, res) => {
+  const email = texto(req.body.email, 120).toLowerCase();
+  const celular = limpiarCelular(req.body.celular);
   const nombre = texto(req.body.nombre, 80);
+  const pin = String(req.body.pin || '');
   const volver = volverSeguro(req.body.volver);
-  const mostrar = error => res.status(400).render('cuenta/ingresar', { titulo: 'Ingresar', volver, error, datos: { celular, nombre } });
+  const mostrar = (error, extra = {}) => res.status(400).render('cuenta/ingresar', { titulo: 'Ingresar', volver, error, datos: { email, celular, nombre, ...extra } });
 
+  if (!esGmail(email)) return mostrar('Escribe tu correo de Gmail (termina en @gmail.com).');
   if (!/^9\d{8}$/.test(celular)) return mostrar('Escribe tu celular de 9 dígitos (empieza en 9).');
-  if (!/^\d{6}$/.test(pin)) return mostrar('El PIN tiene 6 dígitos.');
 
-  let u = await db.buscarUno('usuarios', { celular });
+  let u = await db.buscarUno('usuarios', { email });
   if (u) {
-    if (!verificarClave(pin, u.clave_hash)) return mostrar('El PIN no coincide con ese celular.');
+    if (u.rol !== 'cliente') return mostrar('Ese correo es del personal: ingresa por el panel.');
+    if (u.celular && u.celular !== celular) return mostrar('El celular no coincide con el de ese Gmail. Si cambiaste de número, escríbenos por WhatsApp.');
+    if (!u.celular) u = await db.actualizar('usuarios', u.id, { celular });
   } else {
-    if (nombre.length < 2) return mostrar('Es tu primera vez: escribe tu nombre para crear la cuenta.');
-    u = await db.insertar('usuarios', { rol: 'cliente', nombre, celular, clave_hash: hashClave(pin) });
+    const porCelular = await db.buscarUno('usuarios', { celular });
+    if (porCelular?.email) return mostrar(`Ese celular ya está registrado con otro Gmail (${ocultarCorreo(porCelular.email)}).`);
+    if (porCelular) {
+      // Cuenta antigua de celular + PIN: se pide el PIN una sola vez para unirle este Gmail.
+      if (!pin) return mostrar('Tu celular ya tiene una cuenta con PIN. Escríbelo esta única vez para unirle tu Gmail.', { pedirPin: true });
+      if (!verificarClave(pin, porCelular.clave_hash)) return mostrar('El PIN no coincide con ese celular.', { pedirPin: true });
+      u = await db.actualizar('usuarios', porCelular.id, { email });
+    } else {
+      if (nombre.length < 2) return mostrar('Es tu primera vez: escribe tu nombre para crear tu cuenta.', { nuevo: true });
+      u = await db.insertar('usuarios', { rol: 'cliente', nombre, email, celular });
+    }
   }
-  req.session.uid = u.id;
+  const csrfActual = req.session.csrf;
+  req.session = { uid: u.id, csrf: csrfActual };
+  req.sessionOptions.maxAge = DIAS_CLIENTE * 24 * 3600 * 1000;
+  req.flash('exito', `¡Hola, ${u.nombre.split(' ')[0]}! Quedarás recordado en este dispositivo.`);
   res.redirect(volver);
 }));
+
+// Ruta anterior (celular + PIN): se mantiene para no romper formularios viejos; ahora pide el Gmail.
+router.post('/celular', (req, res) => res.redirect(303, `/cuenta/ingresar?volver=${encodeURIComponent(volverSeguro(req.body.volver))}`));
 
 router.post('/salir', (req, res) => {
   req.session = null;
   res.redirect('/');
 });
 
-// Mis reservas
+// Mi cuenta: puntos, si ya es cliente habitual, y sus reservas con "Repetir".
 router.get('/', requiereCliente, a(async (req, res) => {
-  const mias = await db.listar('reservas', { filtro: { usuario_id: req.usuario.id }, orden: 'creado_en', desc: true });
-  res.render('cuenta/panel', { titulo: 'Mi cuenta', reservas: mias });
+  const [mias, r] = await Promise.all([
+    db.listar('reservas', { filtro: { usuario_id: req.usuario.id }, orden: 'creado_en', desc: true }),
+    precios.reglas()
+  ]);
+  const saldo = puntos.calcularSaldo(mias, r);
+  const frecuente = await precios.esFrecuente(req.usuario.id, r);
+  // "Repetir": arma el carrito de una reserva anterior (combo + adicionales o equipos sueltos).
+  const combos = Object.fromEntries((await db.listar('combos')).map(c => [c.id, c]));
+  const repetir = Object.fromEntries(mias.map(x => {
+    const combo = x.combo_id && combos[x.combo_id]?.publicado ? combos[x.combo_id] : null;
+    const carrito = combo
+      ? { combo_id: combo.id, adicionales: (x.adicionales || []).map(ad => (combo.adicionales || []).findIndex(c => c.etiqueta === ad.etiqueta)).filter(i => i >= 0), items: [] }
+      : { combo_id: null, adicionales: [], items: (x.items || []).map(({ equipo_id, cantidad }) => ({ equipo_id, cantidad })) };
+    return [x.codigo, { ...carrito, horas: x.horas, personas: x.personas, espacio: x.espacio, tipo_evento: x.tipo_evento, lugar: x.lat ? { texto: x.lugar, lat: x.lat, lng: x.lng } : null, acceso_vehicular: x.encuesta?.acceso_vehicular ?? null }];
+  }));
+  res.render('cuenta/panel', { titulo: 'Mi cuenta', reservas: mias, saldo, frecuente, reglas: r, repetir });
 }));
 
 module.exports = router;

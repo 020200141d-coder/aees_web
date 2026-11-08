@@ -102,13 +102,35 @@
       ${t?.recargo_sin_acceso ? `<small class="suave">Incluye ${soles(t.recargo_sin_acceso)} por cargar a mano: el vehículo no llega hasta el lugar.</small>` : ''}
       ${t && !t.gratis && t.motivos_cobro?.length && t.tarifa ? `<small class="suave">El transporte no va incluido porque ${escapar(t.motivos_cobro.join(', '))}.</small>` : ''}
       ${c.descuento ? `<div style="color:var(--disponible)"><span>Descuento ${c.descuento_pct}%${c.promo ? ` (${escapar(c.promo.codigo)})` : c.frecuente ? ' (cliente frecuente)' : ''}</span><span>− ${soles(c.descuento)}</span></div>` : ''}
+      ${c.puntos?.canje.descuento ? `<div style="color:var(--disponible)"><span>Puntos canjeados (${c.puntos.canje.puntos})</span><span>− ${soles(c.puntos.canje.descuento)}</span></div>` : ''}
       ${c.error_promo ? `<div style="color:var(--no-disponible);font-size:.85rem">${escapar(c.error_promo)}</div>` : ''}
       <div class="total"><span>Total</span><b>${soles(c.total)}</b></div>
       <div class="adelanto"><span>Adelanto para separar (${c.adelanto_pct}%)</span><span>${soles(c.adelanto)}</span></div>
       <small class="suave">La fecha y los equipos quedan bloqueados ${c.horas_bloqueo} h mientras pagas el adelanto.</small>`;
 
+    pintarPuntos(c.puntos, evento);
+
     const resumenWa = `Hola AeeS, armé mi evento en la web para el ${evento.fecha || '(fecha por definir)'}${evento.lugar ? ` en ${evento.lugar.texto.split(',')[0]}` : ''}: ${c.lineas.map(l => `${l.cantidad}× ${l.nombre}`).join(', ')}. Total estimado ${soles(c.total)}.`;
     $('#wa-evento').href = `https://wa.me/${config.whatsapp}?text=${encodeURIComponent(resumenWa)}`;
+  }
+
+  // Puntos: si el cliente tiene canjes posibles, elige cuántos usar (cada uno = 5 puntos → S/ 50).
+  // Sin sesión se invita a ingresar para sumar puntos con este evento.
+  function pintarPuntos(p, evento) {
+    const caja = $('#puntos');
+    if (!p) {
+      caja.innerHTML = `<p class="suave puntos-canje" style="font-size:.85rem"><i class="fa-solid fa-star" style="color:var(--primario)"></i> <a href="/cuenta/ingresar?volver=/mi-evento" style="color:var(--primario)">Ingresa con tu Gmail</a> para sumar puntos con este evento.</p>`;
+      return;
+    }
+    const posibles = p.canjes_posibles;
+    if (!posibles) {
+      caja.innerHTML = `<p class="suave puntos-canje" style="font-size:.85rem"><i class="fa-solid fa-star" style="color:var(--primario)"></i> Tienes <b>${p.disponible}</b> puntos. Te faltan ${p.faltan_para_canje} para ${soles(p.canje_soles)} de descuento.</p>`;
+      return;
+    }
+    const elegido = Math.min(evento.canje_puntos || 0, posibles);
+    const opciones = Array.from({ length: posibles + 1 }, (_, n) => `<option value="${n}" ${n === elegido ? 'selected' : ''}>${n ? `Usar ${n * p.canje_puntos} puntos (− ${soles(n * p.canje_soles)})` : 'No usar puntos ahora'}</option>`).join('');
+    caja.innerHTML = `<label class="campo-simple puntos-canje"><span><i class="fa-solid fa-star" style="color:var(--primario)"></i> Tienes <b>${p.disponible}</b> puntos</span><select id="canje-puntos">${opciones}</select></label>`;
+    $('#canje-puntos').addEventListener('change', e => { AeesEvento.actualizar({ canje_puntos: Number(e.target.value) }); cotizar(); });
   }
 
   // Delegación de eventos para los botones que se redibujan.

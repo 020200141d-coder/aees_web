@@ -142,6 +142,9 @@ app.use((err, req, res, next) => {
   if (req.originalUrl.startsWith('/api/') || req.get('accept')?.includes('application/json')) {
     return res.status(status).json({ ok: false, error: mensaje, ...(err.faltan ? { faltan: err.faltan } : {}) });
   }
+  // Si el error ocurrió antes de cargar los datos del negocio (p. ej. CSRF vencido),
+  // la plantilla igual necesita valores mínimos para dibujarse.
+  if (!res.locals.negocio) Object.assign(res.locals, { negocio: { nombre: 'AeeS Acústico', descripcion: '', whatsapp: '', redes: {} }, portada: {}, util, rutaActual: req.path, anio: new Date().getFullYear(), googleClientId: '', flash: null, usuario: res.locals.usuario || null });
   res.status(status).render('error', { titulo: 'Error', status, mensaje });
 });
 
