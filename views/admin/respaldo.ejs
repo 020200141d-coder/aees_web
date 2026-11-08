@@ -9,7 +9,8 @@
   <section class="tarjeta">
     <h2><i class="fa-solid fa-download"></i> Descargar respaldo</h2>
     <p class="suave" style="margin-bottom:1rem">Un archivo con equipos, combos, reservas, pagos, clientes, mensajes y ajustes. Guárdalo cada semana o antes de cambios grandes.</p>
-    <a href="/admin/respaldo/descargar" class="btn btn-primario btn-sm"><i class="fa-solid fa-file-arrow-down"></i> Descargar respaldo</a>
+    <%# Formulario POST (no enlace) para que pida la contraseña: el archivo trae los datos de los clientes. %>
+    <form method="post" action="/admin/respaldo/descargar" data-pedir-clave><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-file-arrow-down"></i> Descargar respaldo</button></form>
   </section>
   <section class="tarjeta">
     <h2><i class="fa-solid fa-upload"></i> Restaurar</h2>

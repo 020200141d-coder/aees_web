@@ -26,13 +26,44 @@
     return json;
   }
 
-  // ── Confirmación antes de eliminar / rechazar ─────────────────────────────
-  $$('form[data-confirmar]').forEach(form => form.addEventListener('submit', async e => {
+  // ── Contraseña para acciones delicadas ────────────────────────────────────
+  // El servidor exige la contraseña al eliminar, tocar cuentas del personal o
+  // usar el respaldo (requiereClave). Aquí solo se pide de forma amable; si se
+  // confirmó hace menos de 10 minutos (meta clave-vigente) no se vuelve a pedir.
+  let claveVigente = $('meta[name="clave-vigente"]')?.content === '1';
+  const pideClave = form => form.hasAttribute('data-pedir-clave') || /\/eliminar$/.test(new URL(form.action, location.href).pathname);
+
+  // Devuelve la contraseña escrita, '' si no hace falta, o null si se canceló.
+  async function pedirClave(texto) {
+    if (claveVigente) return '';
+    if (!hayAlertas) return window.prompt(`${texto || 'Acción protegida'}\nEscribe tu contraseña para confirmar:`);
+    const r = await Swal.fire({
+      icon: 'warning', title: 'Confirma con tu contraseña', text: texto || 'Es una acción protegida del panel.',
+      input: 'password', inputPlaceholder: 'Tu contraseña', inputAttributes: { autocomplete: 'current-password' },
+      showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar',
+      inputValidator: v => (!v ? 'Escribe tu contraseña.' : undefined)
+    });
+    return r.isConfirmed ? r.value : null;
+  }
+
+  // ── Confirmación antes de eliminar / rechazar (y contraseña si toca) ──────
+  $$('form[data-confirmar], form[data-pedir-clave]').forEach(form => form.addEventListener('submit', async e => {
     if (form.dataset.confirmado) return;
     e.preventDefault();
-    const ok = hayAlertas
-      ? (await Swal.fire({ icon: 'warning', title: '¿Seguro?', text: form.dataset.confirmar, showCancelButton: true, confirmButtonText: 'Sí, continuar', cancelButtonText: 'Cancelar' })).isConfirmed
-      : window.confirm(form.dataset.confirmar);
+    let ok = true;
+    if (pideClave(form) && !claveVigente) {
+      const clave = await pedirClave(form.dataset.confirmar);
+      ok = clave !== null && clave !== undefined;
+      if (ok && clave) {
+        let campo = form.querySelector('input[name="_clave"]');
+        if (!campo) { campo = Object.assign(document.createElement('input'), { type: 'hidden', name: '_clave' }); form.append(campo); }
+        campo.value = clave;
+      }
+    } else if (form.dataset.confirmar) {
+      ok = hayAlertas
+        ? (await Swal.fire({ icon: 'warning', title: '¿Seguro?', text: form.dataset.confirmar, showCancelButton: true, confirmButtonText: 'Sí, continuar', cancelButtonText: 'Cancelar' })).isConfirmed
+        : window.confirm(form.dataset.confirmar);
+    }
     if (ok) { form.dataset.confirmado = '1'; form.submit(); }
   }));
 
@@ -225,9 +256,12 @@
     let datos;
     try { datos = JSON.parse(await f.text()); } catch { return toast('error', 'El archivo no es un JSON válido.'); }
     const ok = !hayAlertas || (await Swal.fire({ icon: 'warning', title: '¿Restaurar este respaldo?', text: `Archivo: ${f.name}. Se cargarán ${datos.equipos?.length ?? 0} equipos y ${datos.reservas?.length ?? 0} reservas.`, showCancelButton: true, confirmButtonText: 'Restaurar', cancelButtonText: 'Cancelar' })).isConfirmed;
-    if (!ok) return;
+    if (!ok) { e.target.value = ''; return; }
+    const clave = await pedirClave('Restaurar un respaldo cambia los datos del sitio.');
+    if (clave === null) { e.target.value = ''; return; }
     try {
-      const r = await postJSON('/admin/respaldo/restaurar', datos);
+      // _clave viaja junto con el respaldo; el servidor solo restaura las tablas conocidas.
+      const r = await postJSON('/admin/respaldo/restaurar', { ...datos, _clave: clave });
       await Swal.fire({ icon: 'success', title: 'Respaldo restaurado', text: `Tablas: ${r.tablas.join(', ')}.` });
       location.reload();
     } catch (err) {

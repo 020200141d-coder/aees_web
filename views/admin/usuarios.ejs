@@ -1,10 +1,14 @@
 <%#
-  admin/usuarios.ejs — cuentas del personal. "Publicador" solo gestiona combos y
-  galería; "Administrador" puede todo. Los clientes se registran solos desde el sitio.
+  admin/usuarios.ejs — cuentas del personal (CRUD completo).
+  "Publicador" solo gestiona combos y galería; "Administrador" puede todo.
+  La cuenta principal (ADMIN_EMAIL, la del dueño) se marca y no se puede borrar.
+  Los formularios llevan data-pedir-clave: admin.js pide la contraseña de quien
+  está usando el panel antes de enviarlos (el servidor la vuelve a verificar).
+  Los clientes no aparecen aquí: se registran solos o desde Admin → Clientes.
 %>
 <% const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; %>
 <%- include('_inicio') %>
-<header class="admin-cabecera"><div><h1>Personal</h1><p>Quién puede entrar al panel.</p></div></header>
+<header class="admin-cabecera"><div><h1>Personal</h1><p>Quién puede entrar al panel y qué puede hacer.</p></div></header>
 <div class="rejilla rejilla-2">
   <div class="tabla-caja">
     <table class="tabla">
@@ -12,26 +16,48 @@
       <tbody>
         <% personal.forEach(u => { %>
           <tr>
-            <td><b><%= u.nombre %></b></td><td><%= u.email %></td>
-            <td><span class="chip <%= u.rol === 'admin' ? 'chip-oro' : '' %>"><%= u.rol === 'admin' ? 'Administrador' : 'Publicador' %></span></td>
-            <td><% if (u.id !== usuario.id) { %><form method="post" action="/admin/usuarios/<%= u.id %>/eliminar" data-confirmar="¿Quitar el acceso de <%= u.email %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form><% } else { %><small class="suave">tú</small><% } %></td>
+            <td><b><%= u.nombre %></b><% if (esPrincipal(u)) { %> <span class="chip chip-oro" title="Cuenta del dueño: no se puede borrar">Principal</span><% } %></td>
+            <td><%= u.email %></td>
+            <td><span class="chip <%= u.rol === 'admin' ? 'chip-oro' : '' %>"><%= ROLES[u.rol] || u.rol %></span></td>
+            <td style="white-space:nowrap">
+              <a href="/admin/usuarios?editar=<%= u.id %>" class="btn-icono" aria-label="Editar"><i class="fa-regular fa-pen-to-square"></i></a>
+              <% if (u.id === usuario.id) { %><small class="suave">tú</small>
+              <% } else if (!esPrincipal(u)) { %><form method="post" action="/admin/usuarios/<%= u.id %>/eliminar" data-confirmar="¿Quitar el acceso de <%= u.email %>?" style="display:inline"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form><% } %>
+            </td>
           </tr>
         <% }) %>
       </tbody>
     </table>
   </div>
-  <form method="post" action="/admin/usuarios" class="tarjeta" novalidate>
+
+  <% if (editar) { %>
+  <form method="post" action="/admin/usuarios/<%= editar.id %>" class="tarjeta" novalidate data-pedir-clave>
+    <h2>Editar a <%= editar.email %></h2>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple ancho<%= errores.nombre ? ' error' : '' %>">Nombre<input name="nombre" value="<%= editar.nombre || '' %>" maxlength="80"><%- err('nombre') %></label>
+      <label class="campo-simple<%= errores.rol ? ' error' : '' %>">Rol
+        <select name="rol"><% Object.entries(ROLES).forEach(([id, t]) => { %><option value="<%= id %>" <%= editar.rol === id ? 'selected' : '' %>><%= t %></option><% }) %></select><%- err('rol') %>
+      </label>
+      <label class="campo-simple<%= errores.clave_nueva ? ' error' : '' %>">Contraseña nueva (opcional)<input name="clave_nueva" type="password" autocomplete="new-password" placeholder="Vacía = no se cambia"><%- err('clave_nueva') %></label>
+    </div>
+    <div class="form-pie"><a href="/admin/usuarios" class="btn btn-ghost btn-sm">Cancelar</a><button class="btn btn-primario btn-sm">Guardar cambios</button></div>
+  </form>
+  <% } else { %>
+  <form method="post" action="/admin/usuarios" class="tarjeta" novalidate data-pedir-clave>
     <h2>Nueva cuenta</h2>
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="form-rejilla">
       <label class="campo-simple ancho<%= errores.nombre ? ' error' : '' %>">Nombre<input name="nombre" value="<%= datos.nombre || '' %>" maxlength="80"><%- err('nombre') %></label>
       <label class="campo-simple ancho<%= errores.email ? ' error' : '' %>">Correo<input name="email" type="email" value="<%= datos.email || '' %>" maxlength="120"><%- err('email') %></label>
-      <label class="campo-simple<%= errores.clave ? ' error' : '' %>">Contraseña inicial<input name="clave" type="password" minlength="8" autocomplete="new-password"><%- err('clave') %></label>
+      <label class="campo-simple<%= errores.clave ? ' error' : '' %>">Contraseña inicial<input name="clave" type="password" minlength="10" autocomplete="new-password" placeholder="10+ con letras y números"><%- err('clave') %></label>
       <label class="campo-simple">Rol
         <select name="rol"><option value="publicador" <%= datos.rol !== 'admin' ? 'selected' : '' %>>Publicador (combos y galería)</option><option value="admin" <%= datos.rol === 'admin' ? 'selected' : '' %>>Administrador (todo)</option></select>
       </label>
     </div>
+    <p class="suave" style="font-size:.85rem;margin-top:.6rem"><i class="fa-solid fa-lock"></i> Se te pedirá tu contraseña para confirmar.</p>
     <div class="form-pie"><button class="btn btn-primario btn-sm">Crear cuenta</button></div>
   </form>
+  <% } %>
 </div>
 <%- include('_fin') %>

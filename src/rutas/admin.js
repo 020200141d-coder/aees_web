@@ -18,7 +18,7 @@ const db = require('../db');
 const catalogo = require('../servicios/catalogo');
 const reservasSrv = require('../servicios/reservas');
 const negocio = require('../servicios/negocio');
-const { requiereStaff } = require('../middleware/auth');
+const { requiereStaff, requiereClave, claveVigente, iniciarSesionPersonal, emailPrincipal, CONFIRMACION_MIN } = require('../middleware/auth');
 const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
 const { CATEGORIAS, TIPOS_EVENTO, ESTADOS_RESERVA, texto, numero, hoyLima } = require('../lib/util');
 const TABLAS = require('../db/tablas');
@@ -35,6 +35,9 @@ router.use(async (req, res, next) => {
   res.locals.TIPOS_EVENTO = TIPOS_EVENTO;
   res.locals.ESTADOS_RESERVA = ESTADOS_RESERVA;
   res.locals.pendientes = { mensajes: 0, yape: 0 };
+  // admin.js lo lee para no pedir la contraseña otra vez si se confirmó hace poco.
+  res.locals.claveVigente = claveVigente(req);
+  res.locals.CONFIRMACION_MIN = CONFIRMACION_MIN;
   if (['admin'].includes(req.usuario?.rol)) {
     try {
       const [msjs, pagos] = await Promise.all([db.listar('mensajes', { filtro: { leido: false } }), db.listar('pagos', { filtro: { estado: 'pendiente' } })]);
@@ -54,6 +57,7 @@ const urlImagen = v => {
 const opcional = v => (v === '' || v == null ? null : numero(v, null));
 
 // ── Ingreso del personal ────────────────────────────────────────────────────
+const HASH_FALSO = hashClave(crypto.randomBytes(12).toString('hex'));
 const limiteLogin = limitar({ clave: 'admin-login', max: 8, ventanaMin: 15, mensaje: 'Demasiados intentos. Espera 15 minutos.' });
 const volverSeguro = v => (typeof v === 'string' && /^\/admin(\/|$|\?)/.test(v) ? v : '/admin');
 // Express 5 ya no acepta redirect('back'): volvemos a la página anterior solo si es del panel.
@@ -68,17 +72,23 @@ const volverA = (req, porDefecto) => {
 
 router.get('/ingresar', (req, res) => {
   if (['admin', 'publicador'].includes(req.usuario?.rol)) return res.redirect('/admin');
-  res.render('admin/ingresar', { titulo: 'Ingreso del personal', error: null, email: '', volver: volverSeguro(req.query.volver) });
+  // Aviso de una sola vez cuando la sesión se cerró por inactividad.
+  const aviso = req.session.aviso || null;
+  req.session.aviso = null;
+  res.render('admin/ingresar', { titulo: 'Ingreso del personal', error: null, aviso, email: '', volver: volverSeguro(req.query.volver) });
 });
 
 router.post('/ingresar', limiteLogin, a(async (req, res) => {
   const email = texto(req.body.email, 120).toLowerCase();
   const u = email && await db.buscarUno('usuarios', { email });
-  const ok = u && ['admin', 'publicador'].includes(u.rol) && verificarClave(req.body.clave || '', u.clave_hash);
+  // Si el correo no existe igual se calcula un hash: así la respuesta tarda lo mismo
+  // y no se puede averiguar qué correos tienen cuenta midiendo el tiempo.
+  const claveOk = verificarClave(req.body.clave || '', u?.clave_hash || HASH_FALSO);
+  const ok = u && ['admin', 'publicador'].includes(u.rol) && claveOk;
   if (!ok) {
-    return res.status(401).render('admin/ingresar', { titulo: 'Ingreso del personal', error: 'Correo o contraseña incorrectos.', email, volver: volverSeguro(req.body.volver) });
+    return res.status(401).render('admin/ingresar', { titulo: 'Ingreso del personal', error: 'Correo o contraseña incorrectos.', aviso: null, email, volver: volverSeguro(req.body.volver) });
   }
-  req.session.uid = u.id;
+  iniciarSesionPersonal(req, u);
   res.redirect(volverSeguro(req.body.volver));
 }));
 
@@ -86,6 +96,11 @@ router.post('/salir', (req, res) => {
   req.session = null;
   res.redirect('/admin/ingresar');
 });
+
+// Acciones delicadas: piden la contraseña (ver requiereClave en middleware/auth.js).
+// Se decide por la ruta para que ninguna nueva ruta de eliminar quede sin protección.
+const esDelicada = req => req.method === 'POST' && (req.path.endsWith('/eliminar') || req.path.startsWith('/usuarios') || req.path.startsWith('/respaldo'));
+router.use((req, res, next) => (esDelicada(req) ? requiereClave(req, res, next) : next()));
 
 // ── Inicio / agenda ─────────────────────────────────────────────────────────
 // La agenda muestra el mes con los eventos de cada día y la lista de los
@@ -630,34 +645,70 @@ router.post('/ajustes/portada', soloAdmin, a(async (req, res) => {
 }));
 
 // ── Usuarios del personal (admin) ───────────────────────────────────────────
-router.get('/usuarios', soloAdmin, a(async (req, res) => {
+// CRUD completo: crear, editar (nombre, rol, nueva contraseña) y eliminar.
+// Reglas que protegen al negocio de quedarse sin dueño:
+//  • la cuenta principal (ADMIN_EMAIL, la del dueño) no se borra ni baja de rol;
+//  • nadie se borra ni se quita el rol de admin a sí mismo;
+//  • siempre queda al menos un administrador.
+// Todas estas rutas piden la contraseña de quien las usa (esDelicada).
+const ROLES = { admin: 'Administrador', publicador: 'Publicador' };
+const correoValido = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+// Contraseña del personal: 10+ caracteres con letras y números.
+const claveDebil = c => (c.length < 10 || !/[a-zA-Z]/.test(c) || !/\d/.test(c) ? 'Mínimo 10 caracteres, con letras y números.' : null);
+const esPrincipal = u => Boolean(u?.email && u.email === emailPrincipal());
+
+async function vistaUsuarios(res, { errores = {}, datos = { rol: 'publicador' }, editar = null, estado = 200 } = {}) {
   const todos = await db.listar('usuarios', { orden: 'creado_en' });
-  res.render('admin/usuarios', { titulo: 'Usuarios', personal: todos.filter(u => u.rol !== 'cliente'), errores: {}, datos: { rol: 'publicador' } });
+  res.status(estado).render('admin/usuarios', {
+    titulo: 'Usuarios', personal: todos.filter(u => u.rol !== 'cliente'), errores, datos, editar, ROLES, esPrincipal
+  });
+}
+
+router.get('/usuarios', soloAdmin, a(async (req, res) => {
+  const editar = req.query.editar ? await db.obtener('usuarios', String(req.query.editar)) : null;
+  await vistaUsuarios(res, { editar: editar && editar.rol !== 'cliente' ? editar : null });
 }));
 
 router.post('/usuarios', soloAdmin, a(async (req, res) => {
-  const datos = { nombre: texto(req.body.nombre, 80), email: texto(req.body.email, 120).toLowerCase(), rol: req.body.rol === 'admin' ? 'admin' : 'publicador' };
+  const datos = { nombre: texto(req.body.nombre, 80), email: texto(req.body.email, 120).toLowerCase(), rol: ROLES[req.body.rol] ? req.body.rol : 'publicador' };
   const errores = {};
   if (datos.nombre.length < 2) errores.nombre = 'Escribe el nombre.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.email)) errores.email = 'Correo inválido.';
+  if (!correoValido(datos.email)) errores.email = 'Correo inválido.';
   else if (await db.buscarUno('usuarios', { email: datos.email })) errores.email = 'Ese correo ya tiene cuenta.';
-  if (String(req.body.clave || '').length < 8) errores.clave = 'Mínimo 8 caracteres.';
-  if (Object.keys(errores).length) {
-    const todos = await db.listar('usuarios', { orden: 'creado_en' });
-    return res.status(400).render('admin/usuarios', { titulo: 'Usuarios', personal: todos.filter(u => u.rol !== 'cliente'), errores, datos });
-  }
+  const debil = claveDebil(String(req.body.clave || ''));
+  if (debil) errores.clave = debil;
+  if (Object.keys(errores).length) return vistaUsuarios(res, { errores, datos, estado: 400 });
   await db.insertar('usuarios', { ...datos, clave_hash: hashClave(req.body.clave) });
-  req.flash('exito', `Cuenta creada para ${datos.email} (${datos.rol}).`);
+  req.flash('exito', `Cuenta creada para ${datos.email} (${ROLES[datos.rol]}).`);
+  res.redirect('/admin/usuarios');
+}));
+
+router.post('/usuarios/:id', soloAdmin, a(async (req, res, next) => {
+  const u = await db.obtener('usuarios', req.params.id);
+  if (!u || u.rol === 'cliente') return next();
+  const cambios = { nombre: texto(req.body.nombre, 80), rol: ROLES[req.body.rol] ? req.body.rol : u.rol };
+  const errores = {};
+  if (cambios.nombre.length < 2) errores.nombre = 'Escribe el nombre.';
+  if (cambios.rol !== 'admin' && u.rol === 'admin') {
+    if (esPrincipal(u)) errores.rol = 'La cuenta principal del negocio siempre es administradora.';
+    else if (u.id === req.usuario.id) errores.rol = 'No puedes quitarte el rol de administrador a ti mismo.';
+    else if ((await db.listar('usuarios', { filtro: { rol: 'admin' } })).length <= 1) errores.rol = 'Debe quedar al menos un administrador.';
+  }
+  const nueva = String(req.body.clave_nueva || '');
+  if (nueva) { const debil = claveDebil(nueva); if (debil) errores.clave_nueva = debil; else cambios.clave_hash = hashClave(nueva); }
+  if (Object.keys(errores).length) return vistaUsuarios(res, { errores, editar: { ...u, ...cambios }, estado: 400 });
+  await db.actualizar('usuarios', u.id, cambios);
+  req.flash('exito', `Cuenta de ${u.email} actualizada${nueva ? ' (con contraseña nueva)' : ''}.`);
   res.redirect('/admin/usuarios');
 }));
 
 router.post('/usuarios/:id/eliminar', soloAdmin, a(async (req, res) => {
-  if (req.params.id === req.usuario.id) {
-    req.flash('error', 'No puedes eliminar tu propia cuenta.');
-  } else {
-    const u = await db.obtener('usuarios', req.params.id);
-    if (u && u.rol !== 'cliente') { await db.eliminar('usuarios', u.id); req.flash('exito', 'Cuenta eliminada.'); }
-  }
+  const u = await db.obtener('usuarios', req.params.id);
+  if (!u || u.rol === 'cliente') req.flash('error', 'Esa cuenta no existe.');
+  else if (u.id === req.usuario.id) req.flash('error', 'No puedes eliminar tu propia cuenta.');
+  else if (esPrincipal(u)) req.flash('error', 'La cuenta principal del negocio no se puede eliminar.');
+  else if (u.rol === 'admin' && (await db.listar('usuarios', { filtro: { rol: 'admin' } })).length <= 1) req.flash('error', 'Debe quedar al menos un administrador.');
+  else { await db.eliminar('usuarios', u.id); req.flash('exito', `Se quitó el acceso de ${u.email}.`); }
   res.redirect('/admin/usuarios');
 }));
 
@@ -668,7 +719,9 @@ router.get('/respaldo', soloAdmin, (req, res) => {
   res.render('admin/respaldo', { titulo: 'Respaldo', motor: db.motor });
 });
 
-router.get('/respaldo/descargar', soloAdmin, a(async (req, res) => {
+// POST (no GET) para poder pedir la contraseña: el respaldo trae TODOS los datos,
+// incluidos los de los clientes, así que no debe bajarse con solo abrir un enlace.
+router.post('/respaldo/descargar', soloAdmin, a(async (req, res) => {
   const datos = await db.exportar();
   res.setHeader('Content-Disposition', `attachment; filename="aees-respaldo-${hoyLima()}.json"`);
   res.json({ version: 1, generado: new Date().toISOString(), ...datos });

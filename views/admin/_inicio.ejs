@@ -32,6 +32,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <meta name="csrf" content="<%= csrf %>">
+  <%# "1" si la contraseña se confirmó hace menos de CONFIRMACION_MIN minutos: admin.js no la vuelve a pedir. %>
+  <meta name="clave-vigente" content="<%= typeof claveVigente !== 'undefined' && claveVigente ? '1' : '0' %>">
   <title><%= titulo %> · Panel AeeS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
