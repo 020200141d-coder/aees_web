@@ -46,7 +46,11 @@
             <label class="campo-simple">Horas<input type="number" id="ev-horas" min="1" max="24"></label>
             <label class="campo-simple">Invitados<input type="number" id="ev-personas" min="1" max="5000"></label>
           </div>
-          <label class="casilla" style="margin-top:1rem"><input type="checkbox" id="ev-tecnico" checked> Incluir técnico que monta y opera durante el evento</label>
+          <%# El montaje y la prueba de sonido siempre van incluidos; el técnico que se queda operando es opcional. %>
+          <label class="campo-simple" style="margin-top:1rem">¿El vehículo puede llegar hasta el mismo lugar del evento?
+            <select id="ev-acceso"><option value="">Elige una opción</option><option value="si">Sí, llega hasta la puerta</option><option value="no">No, hay que caminar o subir escaleras</option></select>
+          </label>
+          <label class="casilla" style="margin-top:1rem"><input type="checkbox" id="ev-tecnico"> Técnico que se queda operando todo el evento (el montaje y la prueba de sonido ya van incluidos)</label>
           <div style="margin-top:1.2rem">
             <p class="suave" style="font-size:.9rem;margin-bottom:.6rem"><i class="fa-solid fa-location-dot"></i> Lugar: <b id="ev-lugar-texto">sin marcar</b></p>
             <div class="buscador-lugar">

@@ -32,18 +32,20 @@
     const e = AeesEvento.leer();
     $('#ev-fecha').value = e.fecha || '';
     $('#ev-hora').value = e.hora_inicio || '';
-    $('#ev-horas').value = e.horas || 4;
+    $('#ev-horas').value = e.horas || 6;
     $('#ev-personas').value = e.personas || '';
-    $('#ev-tecnico').checked = e.con_tecnico !== false;
+    $('#ev-tecnico').checked = e.con_tecnico === true;
+    $('#ev-acceso').value = e.acceso_vehicular === true ? 'si' : e.acceso_vehicular === false ? 'no' : '';
     $('#ev-lugar-texto').textContent = e.lugar?.texto || 'sin marcar';
   }
-  ['ev-fecha', 'ev-hora', 'ev-horas', 'ev-personas', 'ev-tecnico'].forEach(id => $(`#${id}`).addEventListener('change', () => {
+  ['ev-fecha', 'ev-hora', 'ev-horas', 'ev-personas', 'ev-tecnico', 'ev-acceso'].forEach(id => $(`#${id}`).addEventListener('change', () => {
     AeesEvento.actualizar({
       fecha: $('#ev-fecha').value || null,
       hora_inicio: $('#ev-hora').value || null,
-      horas: Number($('#ev-horas').value) || 4,
+      horas: Number($('#ev-horas').value) || 6,
       personas: Number($('#ev-personas').value) || null,
-      con_tecnico: $('#ev-tecnico').checked
+      con_tecnico: $('#ev-tecnico').checked,
+      acceso_vehicular: $('#ev-acceso').value === 'si' ? true : $('#ev-acceso').value === 'no' ? false : null
     });
     cotizar();
   }));
@@ -74,7 +76,7 @@
           <span class="precio">${soles(l.subtotal)}</span></div>`;
       }
       if (l.tipo === 'adicional') return `<div class="linea"><div><b>+ ${escapar(l.nombre)}</b><small>Adicional del combo</small></div><span></span><span class="precio">${soles(l.subtotal)}</span></div>`;
-      return `<div class="linea"><div><b>${escapar(l.nombre)}</b><small>${soles(l.precio_unit)} c/u × ${l.jornadas} jornada${l.jornadas > 1 ? 's' : ''}</small></div>
+      return `<div class="linea"><div><b>${escapar(l.nombre)}</b><small>${soles(l.precio_unit)} c/u${l.horas_extra ? ` · + ${l.horas_extra} h extra` : ''}</small></div>
         <div class="cantidad"><button type="button" data-menos="${l.id}" aria-label="Quitar uno">−</button><span>${l.cantidad}</span><button type="button" data-mas="${l.id}" aria-label="Agregar uno">+</button></div>
         <span class="precio">${soles(l.subtotal)}</span></div>`;
     }).join('');
@@ -94,9 +96,11 @@
 
     const t = c.transporte;
     $('#resumen').innerHTML = `
-      <div><span>Equipos (${c.jornadas} jornada${c.jornadas > 1 ? 's' : ''})</span><span>${soles(c.subtotal)}</span></div>
-      <div><span>Técnico en el evento</span><span>${soles(c.tecnico)}</span></div>
-      <div><span>Transporte${t ? ` · ${escapar(t.vehiculo.nombre)}${t.viajes > 1 ? ` ×${t.viajes}` : ''}${r.ruta ? ` · ${r.ruta.km} km` : ''}` : ''}</span><span>${t?.costo != null ? soles(t.costo) : '<small class="suave">marca el lugar</small>'}</span></div>
+      <div><span>Equipos (hasta ${c.horas_base} h${c.horas_extra ? ` + ${c.horas_extra} h extra` : ''})</span><span>${soles(c.subtotal)}</span></div>
+      ${c.tecnico ? `<div><span>Técnico operando el evento</span><span>${soles(c.tecnico)}</span></div>` : ''}
+      <div><span>Transporte${t ? ` · ${escapar(t.vehiculo.nombre)}${t.viajes > 1 ? ` ×${t.viajes}` : ''}${r.ruta ? ` · ${r.ruta.km} km` : ''}` : ''}</span><span>${t?.costo == null ? '<small class="suave">marca el lugar</small>' : t.gratis && !t.recargo_sin_acceso ? '<b style="color:var(--disponible)">Incluido</b>' : soles(t.costo)}</span></div>
+      ${t?.recargo_sin_acceso ? `<small class="suave">Incluye ${soles(t.recargo_sin_acceso)} por cargar a mano: el vehículo no llega hasta el lugar.</small>` : ''}
+      ${t && !t.gratis && t.motivos_cobro?.length && t.tarifa ? `<small class="suave">El transporte no va incluido porque ${escapar(t.motivos_cobro.join(', '))}.</small>` : ''}
       ${c.descuento ? `<div style="color:var(--disponible)"><span>Descuento ${c.descuento_pct}%${c.promo ? ` (${escapar(c.promo.codigo)})` : c.frecuente ? ' (cliente frecuente)' : ''}</span><span>− ${soles(c.descuento)}</span></div>` : ''}
       ${c.error_promo ? `<div style="color:var(--no-disponible);font-size:.85rem">${escapar(c.error_promo)}</div>` : ''}
       <div class="total"><span>Total</span><b>${soles(c.total)}</b></div>

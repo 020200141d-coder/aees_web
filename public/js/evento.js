@@ -16,7 +16,8 @@
 
 (function () {
   const CLAVE = 'aees_evento';
-  const vacio = () => ({ combo_id: null, adicionales: [], items: [], horas: 4, con_tecnico: true });
+  // El técnico que opera todo el evento es opcional (el montaje siempre va incluido).
+  const vacio = () => ({ combo_id: null, adicionales: [], items: [], horas: 6, con_tecnico: false, acceso_vehicular: null });
 
   function leer() {
     try { return { ...vacio(), ...JSON.parse(localStorage.getItem(CLAVE) || '{}') }; } catch (e) { return vacio(); }

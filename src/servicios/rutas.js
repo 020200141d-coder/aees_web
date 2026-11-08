@@ -102,3 +102,25 @@ function ruta(origen, destino) {
 }
 
 module.exports = { geocodificar, ruta, lineaRecta };
+
+// ── Altura del lugar (Open-Meteo Elevation, gratis y sin clave) ─────────────
+// Sirve para la regla de transporte incluido: el centro de Cusco está a unos
+// 3400 m; los barrios en los cerros pasan de 3500 m y la subida cuesta más.
+// Si la API no responde se devuelve null y no se descarta nada: el admin lo
+// confirma en la reunión. Se guarda en memoria para no repetir consultas.
+const alturas = new Map();
+async function altura({ lat, lng }) {
+  const clave = `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
+  if (alturas.has(clave)) return alturas.get(clave);
+  let m = null;
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) m = Number((await res.json()).elevation?.[0]);
+    if (!Number.isFinite(m)) m = null;
+  } catch (err) {
+    console.warn('[altura] sin respuesta de Open-Meteo:', err.message);
+  }
+  if (m != null) alturas.set(clave, m);
+  return m;
+}
+module.exports.altura = altura;

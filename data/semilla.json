@@ -7,7 +7,7 @@
       "telefono": "987166001",
       "whatsapp": "51987166001",
       "correo": "020200141d@uandina.edu.pe",
-      "direccion": "Cusco, Perú",
+      "direccion": "Urb. Larapa Grande A4-9, San Jerónimo, Cusco",
       "horario": "Lun – Sáb 9:00 a 20:00",
       "redes": {
         "instagram": "https://instagram.com/aees_acustico",
@@ -15,9 +15,9 @@
         "tiktok": "https://tiktok.com/@aees_acustico"
       },
       "almacen": {
-        "lat": -13.5226,
-        "lng": -71.9673,
-        "direccion": "Almacén AeeS, Cusco"
+        "lat": -13.5345,
+        "lng": -71.897,
+        "direccion": "Urb. Larapa Grande A4-9, San Jerónimo, Cusco"
       },
       "yape": {
         "numero": "987166001",
@@ -29,11 +29,17 @@
     "reglas": {
       "adelanto_pct": 40,
       "horas_bloqueo": 24,
-      "horas_jornada": 4,
-      "factor_jornada_extra": 1,
-      "tecnico_por_jornada": 150,
+      "horas_jornada": 6,
       "descuento_frecuente_pct": 10,
-      "reservas_para_frecuente": 2
+      "reservas_para_frecuente": 2,
+      "factor_hora_extra": 0.5,
+      "tecnico_por_evento": 150,
+      "vehiculos_transporte_gratis": [
+        "auto"
+      ],
+      "km_transporte_gratis": 15,
+      "altura_max_gratis_m": 3500,
+      "recargo_sin_acceso": 30
     },
     "vehiculos": [
       {
@@ -85,7 +91,7 @@
       "categoria": "audio",
       "rol": "line_array",
       "descripcion": "Caja de line array activa de doble 12\". Proyecta el sonido lejos y parejo: ideal para salones grandes, bodas de más de 200 invitados y eventos al aire libre.",
-      "precio": 250,
+      "precio": 180,
       "precio_mayor": null,
       "mayor_desde": null,
       "ajuste_sin_dmx": 0,
@@ -115,9 +121,9 @@
       "categoria": "audio",
       "rol": "top",
       "descripcion": "Parlante activo de 15\" de EAW, sonido de concierto con medios muy claros. Se usa como complemento del line array o como sistema principal en eventos medianos.",
-      "precio": 150,
-      "precio_mayor": null,
-      "mayor_desde": null,
+      "precio": 100,
+      "precio_mayor": 90,
+      "mayor_desde": 2,
       "ajuste_sin_dmx": 0,
       "precio_adicional": null,
       "cantidad_total": 2,
@@ -146,8 +152,8 @@
       "rol": "top",
       "descripcion": "Parlante activo de 15\" con DSP. El más pedido para cumpleaños y reuniones de hasta 100 personas por par; también trabaja como monitor de escenario.",
       "precio": 100,
-      "precio_mayor": null,
-      "mayor_desde": null,
+      "precio_mayor": 90,
+      "mayor_desde": 2,
       "ajuste_sin_dmx": 0,
       "precio_adicional": 50,
       "cantidad_total": 4,
@@ -175,9 +181,9 @@
       "categoria": "audio",
       "rol": "top",
       "descripcion": "Parlante activo de 15\" liviano y con voz muy clara: perfecto para discursos, misas y conferencias.",
-      "precio": 80,
-      "precio_mayor": null,
-      "mayor_desde": null,
+      "precio": 100,
+      "precio_mayor": 90,
+      "mayor_desde": 2,
       "ajuste_sin_dmx": 0,
       "precio_adicional": null,
       "cantidad_total": 2,
@@ -205,7 +211,7 @@
       "categoria": "audio",
       "rol": "sub",
       "descripcion": "Subwoofer activo de 18\": graves con cuerpo para que la pista de baile se sienta.",
-      "precio": 150,
+      "precio": 100,
       "precio_mayor": null,
       "mayor_desde": null,
       "ajuste_sin_dmx": 0,
@@ -235,7 +241,7 @@
       "categoria": "audio",
       "rol": "sub",
       "descripcion": "Subwoofer activo de doble 18\": la máxima presión de graves para fiestas electrónicas y conciertos.",
-      "precio": 200,
+      "precio": 180,
       "precio_mayor": null,
       "mayor_desde": null,
       "ajuste_sin_dmx": 0,
@@ -325,7 +331,7 @@
       "categoria": "audio",
       "rol": "consola_digital",
       "descripcion": "Consola digital de 24 canales controlada por tablet: ideal para orquestas, bandas en vivo y eventos grandes. Grabación multipista incluida.",
-      "precio": 200,
+      "precio": 150,
       "precio_mayor": null,
       "mayor_desde": null,
       "ajuste_sin_dmx": 0,
@@ -355,7 +361,7 @@
       "categoria": "audio",
       "rol": "consola_digital",
       "descripcion": "Consola digital de 16 canales por tablet o celular, con efectos. Muy práctica para eventos medianos y conferencias.",
-      "precio": 120,
+      "precio": 100,
       "precio_mayor": null,
       "mayor_desde": null,
       "ajuste_sin_dmx": 0,
@@ -919,6 +925,204 @@
   ],
   "combos": [
     {
+      "imagen": "/img/eventos/aees-20260502_182855.jpg",
+      "imagen_fuente": "AeeS Acústico (foto propia)",
+      "id": "combo-pequeno",
+      "nombre": "Paquete pequeño",
+      "nivel": "esencial",
+      "orden": 1,
+      "destacado": true,
+      "publicado": true,
+      "descripcion": "2 JBL EON615 con mezcladora y 2 micrófonos para 50 a 80 personas en lugar cerrado. 6 horas. Transporte incluido en Cusco con acceso vehicular.",
+      "tipos_evento": [
+        "cumpleanos",
+        "fiesta",
+        "graduacion",
+        "quinceanero",
+        "otro"
+      ],
+      "personas_min": 20,
+      "personas_max": 80,
+      "horas_base": 6,
+      "precio": 200,
+      "items": [
+        {
+          "equipo_id": "eon615",
+          "cantidad": 2
+        },
+        {
+          "equipo_id": "soundcraft-8",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "sm58",
+          "cantidad": 2
+        },
+        {
+          "equipo_id": "tripode",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "kit-cables",
+          "cantidad": 1
+        }
+      ],
+      "adicionales": [
+        {
+          "equipo_id": "la151",
+          "cantidad": 2,
+          "precio": 80,
+          "etiqueta": "Lugar abierto: 2 EAW LA151 (los EON quedan de monitor)"
+        },
+        {
+          "equipo_id": "srx818sp",
+          "cantidad": 1,
+          "precio": 100,
+          "etiqueta": "Sub JBL SRX818SP (un bajo)"
+        },
+        {
+          "equipo_id": "srx828sp",
+          "cantidad": 1,
+          "precio": 180,
+          "etiqueta": "Sub JBL SRX828SP (bajo doble)"
+        }
+      ]
+    },
+    {
+      "imagen": "/img/eventos/aees-20260808_201258.jpg",
+      "imagen_fuente": "AeeS Acústico (foto propia)",
+      "id": "combo-mediano",
+      "nombre": "Paquete mediano",
+      "nivel": "recomendado",
+      "orden": 2,
+      "destacado": true,
+      "publicado": true,
+      "descripcion": "2 EAW LA151 con sub JBL SRX818SP, consola digital y micrófonos para 80 a 150 personas. 6 horas. Transporte incluido en Cusco con acceso vehicular.",
+      "tipos_evento": [
+        "boda",
+        "quinceanero",
+        "fiesta",
+        "graduacion",
+        "cumpleanos",
+        "otro"
+      ],
+      "personas_min": 80,
+      "personas_max": 150,
+      "horas_base": 6,
+      "precio": 380,
+      "items": [
+        {
+          "equipo_id": "la151",
+          "cantidad": 2
+        },
+        {
+          "equipo_id": "srx818sp",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "ui16",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "shure-inal",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "sm58",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "kit-cables",
+          "cantidad": 1
+        }
+      ],
+      "adicionales": [
+        {
+          "equipo_id": "eon615",
+          "cantidad": 2,
+          "precio": 100,
+          "etiqueta": "2 JBL EON615 adicionales"
+        },
+        {
+          "equipo_id": "srx828sp",
+          "cantidad": 1,
+          "precio": 180,
+          "etiqueta": "Sub JBL SRX828SP (bajo doble)"
+        },
+        {
+          "equipo_id": "tacho-54",
+          "cantidad": 8,
+          "precio": 150,
+          "etiqueta": "8 tachos LED"
+        }
+      ]
+    },
+    {
+      "imagen": "/img/eventos/aees-20260808_201245.jpg",
+      "imagen_fuente": "AeeS Acústico (foto propia)",
+      "id": "combo-grande",
+      "nombre": "Combo grande · DJ",
+      "nivel": "premium",
+      "orden": 3,
+      "destacado": true,
+      "publicado": true,
+      "descripcion": "Line array EAW XRS212 con sub doble JBL SRX828SP y 2 EON615 de monitor. 6 horas; fiesta electrónica de 8 horas: S/ 100 más.",
+      "tipos_evento": [
+        "fiesta_electronica",
+        "concierto",
+        "fiesta",
+        "boda",
+        "quinceanero",
+        "graduacion"
+      ],
+      "personas_min": 150,
+      "personas_max": 350,
+      "horas_base": 6,
+      "precio": 600,
+      "items": [
+        {
+          "equipo_id": "xrs212",
+          "cantidad": 2
+        },
+        {
+          "equipo_id": "srx828sp",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "eon615",
+          "cantidad": 2
+        },
+        {
+          "equipo_id": "ui24r",
+          "cantidad": 1
+        },
+        {
+          "equipo_id": "kit-cables",
+          "cantidad": 2
+        }
+      ],
+      "adicionales": [
+        {
+          "equipo_id": "srx828sp",
+          "cantidad": 1,
+          "precio": 180,
+          "etiqueta": "Segundo sub doble SRX828SP"
+        },
+        {
+          "equipo_id": "eon615",
+          "cantidad": 2,
+          "precio": 100,
+          "etiqueta": "2 JBL EON615 adicionales (4 monitores para grupo)"
+        },
+        {
+          "equipo_id": "beam290",
+          "cantidad": 4,
+          "precio": 320,
+          "etiqueta": "4 cabezas Beam 290"
+        }
+      ]
+    },
+    {
       "id": "combo-social-100",
       "nombre": "Combo Social 100",
       "nivel": "esencial",
@@ -972,8 +1176,8 @@
       ],
       "imagen": "/img/eventos/aees-20260502_182855.jpg",
       "imagen_fuente": "AeeS Acústico (foto propia)",
-      "publicado": true,
-      "destacado": true,
+      "publicado": false,
+      "destacado": false,
       "orden": 1
     },
     {
@@ -991,7 +1195,7 @@
       ],
       "personas_min": 200,
       "personas_max": 500,
-      "horas_base": 4,
+      "horas_base": 6,
       "precio": 800,
       "items": [
         {
@@ -1106,8 +1310,8 @@
       ],
       "imagen": "/img/eventos/aees-20260808_201258.jpg",
       "imagen_fuente": "AeeS Acústico (foto propia)",
-      "publicado": true,
-      "destacado": true,
+      "publicado": false,
+      "destacado": false,
       "orden": 3
     },
     {

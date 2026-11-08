@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "semilla": "node scripts/cargar-semilla.js",
-    "test": "node --test"
+    "test": "node --test",
+    "precios": "node scripts/precios-2026-11.js"
   },
   "engines": {
     "node": "22.x"

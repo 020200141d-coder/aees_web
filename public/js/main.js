@@ -289,7 +289,7 @@ function initModalEquipo() {
     $('#modal-titulo').textContent = e.nombre;
     $('#modal-detalle').textContent = e.descripcion;
     const ficha = [
-      ['Precio', `${soles(e.precio)} / jornada`],
+      ['Precio', `${soles(e.precio)} por evento`],
       e.mayor_desde ? ['Por cantidad', `${soles(e.precio_mayor)} c/u desde ${e.mayor_desde}`] : null,
       e.ajuste_sin_dmx ? ['Sin DMX', `${soles(Number(e.precio) + Number(e.ajuste_sin_dmx))} c/u`] : null,
       ['Marca / modelo', `${e.marca} ${e.modelo}`],

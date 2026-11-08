@@ -22,7 +22,7 @@
   const soles = n => `S/ ${Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const escapar = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const { almacen, whatsapp } = JSON.parse($('#datos-asistente').textContent);
-  const HORAS_TIPO = { fiesta_electronica: 8, concierto: 6, fiesta: 6, quinceanero: 6, boda: 6, cumpleanos: 4, graduacion: 5, corporativo: 4, conferencia: 4, otro: 4 };
+  const HORAS_TIPO = { fiesta_electronica: 8, concierto: 6, fiesta: 6, quinceanero: 6, boda: 6, cumpleanos: 6, graduacion: 6, corporativo: 4, conferencia: 4, otro: 6 };
 
   let paso = 0;
   let lugar = null; // { texto, lat, lng }
@@ -58,8 +58,11 @@
       if (!form.horas.value) form.horas.placeholder = `${HORAS_TIPO[e.target.value]} h (típico)`;
       setTimeout(() => irA(2), 250);
     }
+    if (['orquesta', 'banda'].includes(e.target.name)) mostrarDatosGrupo();
     guardarBorrador();
   });
+  // Los datos del grupo (integrantes, horas, monitoreo) solo aparecen con músicos en vivo.
+  const mostrarDatosGrupo = () => { $('#datos-grupo').hidden = !(form.orquesta.checked || form.banda.checked); };
   const rango = $('#personas'), salida = $('#personas-valor');
   rango.addEventListener('input', () => { salida.textContent = rango.value; });
 
@@ -73,8 +76,12 @@
       hay_electricidad: !form.sin_electricidad.checked,
       fecha: form.fecha.value || null,
       hora_inicio: form.hora_inicio.value || null,
-      horas: Number(form.horas.value) || HORAS_TIPO[form.tipo_evento.value] || 4,
+      horas: Number(form.horas.value) || HORAS_TIPO[form.tipo_evento.value] || 6,
       extras: Object.fromEntries(['orquesta', 'banda', 'dj', 'proyeccion', 'luces'].map(k => [k, form[k].checked])),
+      integrantes: Number(form.integrantes.value) || null,
+      horas_grupo: Number(form.horas_grupo.value) || null,
+      trae_monitoreo: form.trae_monitoreo.checked,
+      acceso_vehicular: form.acceso_vehicular.value === 'si',
       lugar
     };
   }
@@ -89,12 +96,17 @@
     if (d.hora_inicio) form.hora_inicio.value = d.hora_inicio;
     if (d.horas) form.horas.value = d.horas;
     if (d.extras) Object.entries(d.extras).forEach(([k, v]) => { if (form[k]) form[k].checked = Boolean(v); });
+    if (d.integrantes) form.integrantes.value = d.integrantes;
+    if (d.horas_grupo) form.horas_grupo.value = d.horas_grupo;
+    if (d.trae_monitoreo) form.trae_monitoreo.checked = true;
+    if (d.acceso_vehicular === false) form.querySelector('[name="acceso_vehicular"][value="no"]').checked = true;
     if (d.lugar?.lat) lugar = d.lugar;
+    mostrarDatosGrupo();
   }
 
   function guardarBorrador() {
     const enc = leerEncuesta();
-    AeesEvento.actualizar({ encuesta: enc, tipo_evento: enc.tipo_evento, personas: enc.personas, espacio: enc.espacio, fecha: enc.fecha, hora_inicio: enc.hora_inicio, horas: enc.horas, lugar: enc.lugar });
+    AeesEvento.actualizar({ encuesta: enc, tipo_evento: enc.tipo_evento, personas: enc.personas, espacio: enc.espacio, fecha: enc.fecha, hora_inicio: enc.hora_inicio, horas: enc.horas, lugar: enc.lugar, acceso_vehicular: enc.acceso_vehicular });
   }
 
   // Recuperar respuestas anteriores y el ?tipo= de los enlaces de la portada.
@@ -209,6 +221,13 @@
   // ── Paso 6: propuesta ─────────────────────────────────────────────────────
   const ICONOS_CAT = { audio: 'fa-volume-high', iluminacion: 'fa-lightbulb', video: 'fa-tv', electrico: 'fa-bolt', estructura: 'fa-cubes' };
 
+  // "Incluido" en verde cuando aplica la regla de transporte sin costo.
+  function textoTransporte(envio) {
+    if (envio?.costo == null) return 'Marca el lugar';
+    if (envio.gratis && !envio.recargo_sin_acceso) return '<b style="color:var(--exito, #5dca82)">Incluido</b>';
+    return soles(envio.costo);
+  }
+
   function tarjetaPlan(op, destacado) {
     const c = op.cotizacion;
     const envio = op.envio;
@@ -218,14 +237,15 @@
       <article class="plan${destacado ? ' destacado' : ''}">
         <h3>${escapar(op.titulo)}</h3>
         <div class="total">${soles(c.total)}</div>
-        <div class="adelanto">Separas con ${soles(c.adelanto)} (${c.adelanto_pct}%) · ${c.jornadas} jornada${c.jornadas > 1 ? 's' : ''}</div>
+        <div class="adelanto">Separas con ${soles(c.adelanto)} (${c.adelanto_pct}%)${c.horas_extra ? ` · incluye ${c.horas_extra} h extra` : ''}</div>
         ${faltan}
         <ul>${lineasEquipos}</ul>
         ${op.adicionales?.length ? `<div class="combo-adicionales">${op.adicionales.map(a => `<span><b>+ ${soles(a.precio)}</b> ${escapar(a.etiqueta)}</span>`).join('')}</div>` : ''}
         <div class="desglose">
           <div><span>Equipos</span><span>${soles(c.subtotal)}</span></div>
-          <div><span>Técnico en el evento</span><span>${soles(c.tecnico)}</span></div>
-          <div><span>Transporte ${envio ? `(${escapar(envio.vehiculo.nombre)}${envio.viajes > 1 ? ` ×${envio.viajes}` : ''})` : ''}</span><span>${envio?.costo != null ? soles(envio.costo) : 'Marca el lugar'}</span></div>
+          ${c.tecnico ? `<div><span>Técnico operando el evento</span><span>${soles(c.tecnico)}</span></div>` : ''}
+          <div><span>Transporte ${envio ? `(${escapar(envio.vehiculo.nombre)}${envio.viajes > 1 ? ` ×${envio.viajes}` : ''})` : ''}</span><span>${textoTransporte(envio)}</span></div>
+          ${envio?.recargo_sin_acceso ? `<div><span>Carga a mano (sin acceso vehicular)</span><span>incluida arriba</span></div>` : ''}
           ${envio ? `<div><span>Carga aprox.</span><span>${envio.carga.volumen_l} L · ${envio.carga.peso_kg} kg</span></div>` : ''}
         </div>
         <button type="button" class="btn ${destacado ? 'btn-primario' : 'btn-ghost'} btn-bloque" data-elegir="${escapar(op.nivel)}"><i class="fa-solid fa-calendar-check"></i> Elegir y reservar</button>
@@ -261,7 +281,7 @@
     AeesEvento.aplicarOpcion(op, {
       encuesta: enc, tipo_evento: enc.tipo_evento, personas: enc.personas, espacio: enc.espacio,
       fecha: enc.fecha, hora_inicio: enc.hora_inicio, horas: r.encuesta.horas, lugar,
-      con_tecnico: true, explicacion: r.explicacion.texto
+      con_tecnico: Boolean(op.cotizacion.tecnico), acceso_vehicular: enc.acceso_vehicular, explicacion: r.explicacion.texto
     });
     AeesSonido.confirmar();
     window.location.href = '/mi-evento';

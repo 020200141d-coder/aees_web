@@ -134,7 +134,7 @@
       <header class="seccion-titulo" data-reveal>
         <span class="seccion-num">03</span>
         <h2>Combos y paquetes</h2>
-        <p>Precio por jornada de <%= reglas.horas_jornada %> horas. Súmale adicionales con precio especial al reservar.</p>
+        <p>Precio por evento de hasta <%= reglas.horas_jornada %> horas. Súmale adicionales con precio especial al reservar.</p>
       </header>
       <div class="grid-combos" data-stagger>
         <% combosOrden.forEach(c => { %>
@@ -213,7 +213,7 @@
       <header class="seccion-titulo" data-reveal>
         <span class="seccion-num">05</span>
         <h2>Equipos</h2>
-        <p>Precio por jornada. Elige una fecha para ver qué está libre ese día y súmalo a tu evento con <i class="fa-solid fa-plus"></i>.</p>
+        <p>Precio por evento de hasta <%= reglas.horas_jornada %> horas. Elige una fecha para ver qué está libre ese día y súmalo a tu evento con <i class="fa-solid fa-plus"></i>.</p>
       </header>
 
       <div class="barra-catalogo" data-reveal>
@@ -242,7 +242,7 @@
               <span class="marca"><%= e.marca %> · <%= e.modelo %></span>
               <h3><%= e.nombre %></h3>
               <div class="equipo-pie">
-                <span class="precio"><%= soles(e.precio) %> <small>/ jornada</small></span>
+                <span class="precio"><%= soles(e.precio) %> <small>/ evento</small></span>
                 <button class="btn-agregar" data-agregar="<%= e.id %>" aria-label="Agregar <%= e.nombre %> a mi evento" <%= libre ? '' : 'disabled' %>><i class="fa-solid fa-plus"></i></button>
               </div>
             </div>

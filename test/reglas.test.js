@@ -11,7 +11,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const semilla = require('../data/semilla.json');
 const { factorTiempo, precioUnitario, subtotalEquipos } = require('../src/servicios/precios');
-const { carga } = require('../src/servicios/transporte');
+const { carga, evaluarGratis } = require('../src/servicios/transporte');
 const { recomendar } = require('../src/servicios/recomendador');
 const ia = require('../src/servicios/ia');
 const { interpretarReglas } = ia;
@@ -21,10 +21,11 @@ const libres = Object.fromEntries(semilla.equipos.map(e => [e.id, e.cantidad_tot
 const reglas = semilla.ajustes.reglas;
 const combo = id => semilla.combos.find(c => c.id === id);
 
-test('una fiesta de 8 horas son 2 jornadas y cuesta el doble (factor 1)', () => {
-  assert.deepEqual(factorTiempo(8, 4, 1), { jornadas: 2, factor: 2 });
-  assert.deepEqual(factorTiempo(4, 4, 1), { jornadas: 1, factor: 1 });
-  assert.deepEqual(factorTiempo(9, 4, 0.5), { jornadas: 3, factor: 2 });
+test('precio por evento de 6 h; cada hora extra cobra la parte proporcional × 0.5', () => {
+  assert.equal(factorTiempo(6, 6, 0.5).factor, 1);
+  assert.equal(factorTiempo(4, 6, 0.5).factor, 1); // menos horas no baja el precio
+  assert.equal(factorTiempo(8, 6, 0.5).horas_extra, 2);
+  assert.ok(Math.abs(factorTiempo(8, 6, 0.5).factor - 7 / 6) < 1e-9);
 });
 
 test('tachos LED: S/ 25 c/u, S/ 20 desde 13 unidades y S/ 5 menos sin DMX', () => {
@@ -35,17 +36,42 @@ test('tachos LED: S/ 25 c/u, S/ 20 desde 13 unidades y S/ 5 menos sin DMX', () =
   assert.equal(precioUnitario(tacho, 16, false), 15);
 });
 
-test('el Combo Line Array cuesta S/ 800 y +2 EON615 suman S/ 100', () => {
-  const c = combo('combo-line-array');
-  const r = subtotalEquipos({ combo: c, adicionales: [c.adicionales[0]], items: [], horas: 4 }, mapa, reglas);
-  assert.equal(r.subtotal, 900);
-  assert.equal(r.jornadas, 1);
+test('Paquete pequeño: S/ 200 por 6 h; lugar abierto (LA151) +80; sub +100; sub doble +180', () => {
+  const c = combo('combo-pequeno');
+  assert.equal(subtotalEquipos({ combo: c, items: [], horas: 6 }, mapa, reglas).subtotal, 200);
+  const [abierto, sub, doble] = c.adicionales;
+  assert.equal(subtotalEquipos({ combo: c, adicionales: [abierto], items: [], horas: 6 }, mapa, reglas).subtotal, 280);
+  assert.equal(subtotalEquipos({ combo: c, adicionales: [sub], items: [], horas: 6 }, mapa, reglas).subtotal, 300);
+  assert.equal(subtotalEquipos({ combo: c, adicionales: [doble], items: [], horas: 6 }, mapa, reglas).subtotal, 380);
 });
 
-test('con combo, la jornada del evento es la del combo (5 h = 1 jornada)', () => {
-  const r = subtotalEquipos({ combo: combo('combo-fiesta-150'), items: [{ equipo_id: 'beam290', cantidad: 2 }], horas: 5 }, mapa, reglas);
-  assert.equal(r.jornadas, 1);
-  assert.equal(r.subtotal, 650 + 160);
+test('Combo grande S/ 600; la fiesta electrónica de 8 h cuesta S/ 100 más', () => {
+  const c = combo('combo-grande');
+  assert.equal(subtotalEquipos({ combo: c, items: [], horas: 6 }, mapa, reglas).subtotal, 600);
+  assert.equal(subtotalEquipos({ combo: c, items: [], horas: 8 }, mapa, reglas).subtotal, 700);
+});
+
+test('parlante de 15" S/ 100 suelto y S/ 180 el par; line array S/ 180 c/u', () => {
+  assert.equal(precioUnitario(mapa.eon615, 1, true), 100);
+  assert.equal(precioUnitario(mapa.eon615, 2, true) * 2, 180);
+  assert.equal(precioUnitario(mapa.zlx15p, 2, true) * 2, 180);
+  assert.equal(precioUnitario(mapa.xrs212, 1, true), 180);
+});
+
+test('transporte incluido: paquete en auto, ≤ 15 km, sin cerro y con acceso vehicular', () => {
+  assert.equal(evaluarGratis({ vehiculoId: 'auto', viajes: 1, km: 12, altura: 3400, acceso: true }, reglas).gratis, true);
+  assert.equal(evaluarGratis({ vehiculoId: 'auto', viajes: 1, km: 12, altura: 3650, acceso: true }, reglas).gratis, false); // cerro
+  assert.equal(evaluarGratis({ vehiculoId: 'auto', viajes: 1, km: 40, altura: 3000, acceso: true }, reglas).gratis, false); // lejos
+  assert.equal(evaluarGratis({ vehiculoId: 'auto', viajes: 1, km: 5, altura: 3400, acceso: false }, reglas).gratis, false); // sin acceso
+  assert.equal(evaluarGratis({ vehiculoId: 'station', viajes: 1, km: 5, altura: 3400, acceso: true }, reglas).gratis, false); // combo grande
+});
+
+test('los paquetes pequeño y mediano entran en un auto; el combo grande no', () => {
+  const auto = semilla.ajustes.vehiculos.find(v => v.id === 'auto');
+  const entra = id => { const c = carga(combo(id).items, mapa); return c.volumen_l <= auto.capacidad_l * 0.85 && c.peso_kg <= auto.capacidad_kg; };
+  assert.ok(entra('combo-pequeno'));
+  assert.ok(entra('combo-mediano'));
+  assert.ok(!entra('combo-grande'));
 });
 
 test('el ejemplo del negocio entra en un auto: bajo + 3 EON + consola + 6 tachos + cables', () => {
@@ -78,7 +104,55 @@ test('fiesta electrónica de 300: perfil SPL, 8 horas, line array y cabezas móv
   assert.equal(r.perfil, 'spl');
   assert.equal(r.horas, 8);
   assert.ok(ids.includes('xrs212') && ids.includes('beam290'));
-  assert.equal(r.combo.id, 'combo-line-array');
+  assert.equal(r.combo.id, 'combo-grande');
+});
+
+test('fiesta electrónica pequeña: el mínimo es el sistema del DJ (line array + bajo doble + 2 monitores)', () => {
+  const r = recomendar({ tipo_evento: 'fiesta_electronica', personas: 60 }, { mapa, libres, combos: semilla.combos });
+  const esencial = Object.fromEntries(r.opciones[0].items.map(i => [i.equipo_id, i.cantidad]));
+  assert.equal(esencial.xrs212, 2);
+  assert.equal(esencial.srx828sp, 1);
+  assert.equal(esencial.eon615, 2);
+});
+
+test('cumpleaños de 70 en lugar cerrado: 2 EON615, mezcladora pequeña y 2 micros', () => {
+  const r = recomendar({ tipo_evento: 'cumpleanos', personas: 70 }, { mapa, libres, combos: semilla.combos });
+  const it = Object.fromEntries(r.opciones[1].items.map(i => [i.equipo_id, i.cantidad]));
+  assert.equal(it.eon615, 2);
+  assert.equal(it['soundcraft-8'], 1);
+  assert.equal(it.sm58, 2);
+  assert.equal(r.combo.id, 'combo-pequeno');
+});
+
+test('cumpleaños de 70 al aire libre: cambia a EAW LA151', () => {
+  const r = recomendar({ tipo_evento: 'cumpleanos', personas: 70, espacio: 'exterior' }, { mapa, libres, combos: semilla.combos });
+  const ids = r.opciones[1].items.map(i => i.equipo_id);
+  assert.ok(ids.includes('la151') && !ids.includes('eon615'));
+});
+
+test('DJ en una fiesta de 150: XRS212 con sub doble y 2 EON615 de monitor', () => {
+  const r = recomendar({ tipo_evento: 'fiesta', personas: 150, extras: { dj: true } }, { mapa, libres, combos: semilla.combos });
+  const it = Object.fromEntries(r.opciones[1].items.map(i => [i.equipo_id, i.cantidad]));
+  assert.equal(it.xrs212, 2);
+  assert.equal(it.srx828sp, 1);
+  assert.equal(it.eon615, 2);
+});
+
+test('orquesta de 8 integrantes: 8 micros, 4 monitores y Ui24R; 5 h de show alargan el evento', () => {
+  const r = recomendar({ tipo_evento: 'boda', personas: 120, horas: 4, integrantes: 8, horas_grupo: 7, extras: { orquesta: true } }, { mapa, libres, combos: semilla.combos });
+  const items = r.opciones[1].items;
+  const mics = items.filter(i => mapa[i.equipo_id].rol === 'mic_vocal').reduce((s, i) => s + i.cantidad, 0);
+  const it = Object.fromEntries(items.map(i => [i.equipo_id, i.cantidad]));
+  assert.equal(mics, 8);
+  assert.equal(it.eon615, 4);
+  assert.equal(it.ui24r, 1);
+  assert.equal(r.horas, 7);
+  assert.equal(r.con_tecnico, true);
+});
+
+test('si el grupo trae su monitoreo, no se cotizan los 4 monitores', () => {
+  const r = recomendar({ tipo_evento: 'boda', personas: 120, integrantes: 5, trae_monitoreo: true, extras: { banda: true } }, { mapa, libres, combos: semilla.combos });
+  assert.ok(!r.opciones[1].items.some(i => i.equipo_id === 'eon615'));
 });
 
 test('cumpleaños de 100 personas sugiere un combo con sonido (no uno de solo luces)', () => {

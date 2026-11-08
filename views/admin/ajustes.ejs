@@ -45,11 +45,22 @@
   <div class="form-rejilla">
     <label class="campo-simple">Adelanto para separar (%)<input name="adelanto_pct" type="number" min="10" max="100" value="<%= reglas.adelanto_pct %>"></label>
     <label class="campo-simple">Horas que se bloquea la fecha sin pagar<input name="horas_bloqueo" type="number" min="1" max="168" value="<%= reglas.horas_bloqueo %>"></label>
-    <label class="campo-simple">Horas por jornada<input name="horas_jornada" type="number" min="1" max="12" value="<%= reglas.horas_jornada %>"></label>
-    <label class="campo-simple">Factor por jornada extra<input name="factor_jornada_extra" type="number" step="0.05" min="0" max="2" value="<%= reglas.factor_jornada_extra %>"><small class="ayuda">1 = cada jornada extra cuesta igual (8 h = doble). 0.5 = mitad.</small></label>
-    <label class="campo-simple">Técnico por jornada (S/)<input name="tecnico_por_jornada" type="number" min="0" value="<%= reglas.tecnico_por_jornada %>"></label>
+    <label class="campo-simple">Horas que cubre el precio de un evento<input name="horas_jornada" type="number" min="1" max="12" value="<%= reglas.horas_jornada %>"><small class="ayuda">Los combos pueden tener sus propias horas.</small></label>
+    <label class="campo-simple">Factor por hora extra<input name="factor_hora_extra" type="number" step="0.05" min="0" max="2" value="<%= reglas.factor_hora_extra %>"><small class="ayuda">0.5: Combo grande S/ 600 a 8 h = S/ 700 (cada hora extra cobra media parte proporcional).</small></label>
+    <label class="campo-simple">Técnico operando el evento (S/)<input name="tecnico_por_evento" type="number" min="0" value="<%= reglas.tecnico_por_evento %>"><small class="ayuda">Opcional para el cliente; el montaje siempre va incluido.</small></label>
     <label class="campo-simple">Descuento cliente frecuente (%)<input name="descuento_frecuente_pct" type="number" min="0" max="50" value="<%= reglas.descuento_frecuente_pct %>"></label>
     <label class="campo-simple">Reservas pagadas para ser frecuente<input name="reservas_para_frecuente" type="number" min="1" value="<%= reglas.reservas_para_frecuente %>"></label>
+  </div>
+  <%# Transporte incluido: el almacén (arriba, Latitud/Longitud) es el punto de partida de la ruta. %>
+  <h3 style="margin-top:1.4rem;font-size:1rem"><i class="fa-solid fa-truck-fast"></i> Transporte incluido (paquetes pequeños y medianos)</h3>
+  <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">No se cobra transporte si la carga entra en los vehículos marcados, el lugar está cerca, no está en un cerro y el vehículo llega hasta la puerta.</p>
+  <div class="form-rejilla">
+    <div class="campo-simple"><span>Vehículos con transporte incluido</span>
+      <% vehiculos.forEach(v => { %><label class="casilla"><input type="checkbox" name="vehiculos_transporte_gratis" value="<%= v.id %>" <%= (reglas.vehiculos_transporte_gratis || []).includes(v.id) ? 'checked' : '' %>> <%= v.nombre %></label><% }) %>
+    </div>
+    <label class="campo-simple">Distancia máxima por carretera (km)<input name="km_transporte_gratis" type="number" step="0.5" min="0" max="200" value="<%= reglas.km_transporte_gratis %>"><small class="ayuda">Larapa → Plaza de Armas ≈ 12 km.</small></label>
+    <label class="campo-simple">Altura máxima del lugar (m s. n. m.)<input name="altura_max_gratis_m" type="number" min="0" max="6000" value="<%= reglas.altura_max_gratis_m %>"><small class="ayuda">Centro de Cusco ≈ 3400 m. Más alto = cerros.</small></label>
+    <label class="campo-simple">Recargo si el vehículo no llega (S/)<input name="recargo_sin_acceso" type="number" min="0" value="<%= reglas.recargo_sin_acceso %>"><small class="ayuda">Por cargar el equipo a mano el último tramo.</small></label>
   </div>
   <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar reglas</button></div>
 </form>

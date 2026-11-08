@@ -12,6 +12,14 @@
 //     auto:    60 + 3.60 × 66 ≈ S/ 298
 //     station: 80 + 4.85 × 66 ≈ S/ 400
 //  Las tarifas se editan en Admin → Ajustes → Vehículos.
+//
+//  Transporte SIN costo (regla del negocio, editable en Ajustes → Reglas):
+//   el almacén está en Larapa Grande (San Jerónimo). Un paquete pequeño o
+//   mediano (carga que entra en un auto) va gratis al centro de Cusco y sus
+//   alrededores, si:  • la ruta no pasa de km_transporte_gratis,
+//                     • el lugar no está en un cerro (altura ≤ altura_max_gratis_m),
+//                     • el vehículo llega hasta el mismo lugar del evento.
+//   Si el vehículo NO llega, se suma recargo_sin_acceso (cargar a mano).
 // ============================================================================
 
 const db = require('../db');
@@ -36,8 +44,20 @@ async function vehiculos() {
   return (await db.ajuste('vehiculos')) || [];
 }
 
-// Devuelve { vehiculo, viajes, costo, carga, distancia_km } o null si no hay distancia.
-async function calcular(expandidos, mapa, distanciaKm) {
+// Decide si el transporte va incluido. `altura` puede ser null (no se pudo
+// consultar): en ese caso no se descarta, se confirma en la reunión.
+function evaluarGratis({ vehiculoId, viajes, km, altura, acceso }, r) {
+  const motivos = [];
+  if (!(r.vehiculos_transporte_gratis || []).includes(vehiculoId) || viajes > 1) motivos.push('la carga necesita un vehículo más grande');
+  if (!(km <= r.km_transporte_gratis)) motivos.push(`el lugar está a más de ${r.km_transporte_gratis} km del almacén`);
+  if (altura != null && altura > r.altura_max_gratis_m) motivos.push(`el lugar está en zona alta (${Math.round(altura)} m)`);
+  if (acceso === false) motivos.push('el vehículo no llega hasta el lugar');
+  return { gratis: motivos.length === 0, motivos };
+}
+
+// Devuelve { vehiculo, viajes, costo, carga, distancia_km, gratis, ... } .
+// opciones: { acceso (true/false/undefined), altura (m o null), reglas }
+async function calcular(expandidos, mapa, distanciaKm, { acceso, altura = null, reglas = null } = {}) {
   const lista = (await vehiculos()).slice().sort((a, b) => a.base - b.base);
   const c = carga(expandidos, mapa);
   if (!lista.length) return null;
@@ -55,8 +75,18 @@ async function calcular(expandidos, mapa, distanciaKm) {
   }
 
   const km = Number(distanciaKm);
-  const costo = Number.isFinite(km) ? redondear((vehiculo.base + vehiculo.por_km * km) * viajes) : null;
+  const tarifa = Number.isFinite(km) ? redondear((vehiculo.base + vehiculo.por_km * km) * viajes) : null;
+  const r = reglas || {};
+  const evalua = Number.isFinite(km) && reglas ? evaluarGratis({ vehiculoId: vehiculo.id, viajes, km, altura, acceso }, r) : { gratis: false, motivos: [] };
+  const recargo = acceso === false ? Number(r.recargo_sin_acceso || 0) : 0;
+  const costo = tarifa == null ? null : redondear((evalua.gratis ? 0 : tarifa) + recargo);
   return {
+    tarifa, // lo que costaría sin la regla de transporte incluido
+    gratis: evalua.gratis,
+    motivos_cobro: evalua.motivos,
+    recargo_sin_acceso: recargo,
+    acceso_vehicular: acceso === undefined ? null : acceso,
+    altura_m: altura == null ? null : Math.round(altura),
     vehiculo: { id: vehiculo.id, nombre: vehiculo.nombre, descripcion: vehiculo.descripcion },
     viajes,
     carga: c,
@@ -65,4 +95,4 @@ async function calcular(expandidos, mapa, distanciaKm) {
   };
 }
 
-module.exports = { calcular, carga, vehiculos };
+module.exports = { calcular, carga, vehiculos, evaluarGratis };

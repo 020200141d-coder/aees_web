@@ -71,7 +71,13 @@ router.post('/recomendar', limiteIA, a(async (req, res) => {
     horas: Math.round(numero(b.horas, 0)) || null,
     hay_electricidad: b.hay_electricidad !== false,
     extras: Object.fromEntries(['orquesta', 'banda', 'dj', 'proyeccion', 'luces'].map(k => [k, Boolean(b.extras?.[k])])),
-    nombre: texto(b.nombre, 40)
+    nombre: texto(b.nombre, 40),
+    // Músicos en vivo: datos para ajustar al rider técnico del grupo.
+    integrantes: Math.min(20, Math.max(0, Math.round(numero(b.integrantes, 0)))) || null,
+    horas_grupo: Math.min(24, Math.max(0, Math.round(numero(b.horas_grupo, 0)))) || null,
+    trae_monitoreo: b.trae_monitoreo === true,
+    // ¿El vehículo llega hasta el lugar? (para el transporte incluido)
+    acceso_vehicular: b.acceso_vehicular === false ? false : b.acceso_vehicular === true ? true : null
   };
   if (b.extras && b.extras.luces === undefined) encuesta.extras.luces = true;
   const fecha = fechaValida(b.fecha);
@@ -79,10 +85,12 @@ router.post('/recomendar', limiteIA, a(async (req, res) => {
 
   const [equipos, combos, n] = await Promise.all([catalogo.equipos({ soloPublicados: false }), catalogo.combos(), db.ajuste('negocio')]);
   const mapa = catalogo.mapaPorId(equipos);
-  const [libres, pronostico, ruta] = await Promise.all([
+  const [libres, pronostico, ruta, alturaM, reglas] = await Promise.all([
     fecha ? catalogo.disponibilidad(fecha) : Object.fromEntries(equipos.map(e => [e.id, e.estado === 'operativo' ? e.cantidad_total : 0])),
     lugar && fecha ? clima.pronostico({ ...lugar, fecha }) : null,
-    lugar && n?.almacen ? rutas.ruta(n.almacen, lugar) : null
+    lugar && n?.almacen ? rutas.ruta(n.almacen, lugar) : null,
+    lugar ? rutas.altura(lugar) : null,
+    precios.reglas()
   ]);
 
   const rec = recomendar(encuesta, { mapa, libres, combos, lluvia: pronostico?.lluvia_probable && encuesta.espacio === 'exterior' });
@@ -90,8 +98,8 @@ router.post('/recomendar', limiteIA, a(async (req, res) => {
   // Precio, transporte y lista legible de cada opción.
   const armar = async ({ nivel, items, combo }) => {
     const expandidos = catalogo.expandir({ combo, items });
-    const envio = ruta ? await transporte.calcular(expandidos, mapa, ruta.km) : null;
-    const cot = await precios.cotizar({ combo, items, horas: rec.horas, conTecnico: true, transporte: envio }, mapa);
+    const envio = ruta ? await transporte.calcular(expandidos, mapa, ruta.km, { acceso: encuesta.acceso_vehicular ?? undefined, altura: alturaM, reglas }) : null;
+    const cot = await precios.cotizar({ combo, items, horas: rec.horas, conTecnico: rec.con_tecnico, transporte: envio }, mapa);
     const equiposLista = (combo ? combo.items : items).map(it => {
       const e = mapa[it.equipo_id];
       return { equipo_id: it.equipo_id, cantidad: it.cantidad, nombre: e?.nombre, categoria: e?.categoria, rol: e?.rol, motivo: it.motivo || '' };

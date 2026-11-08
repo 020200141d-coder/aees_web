@@ -90,7 +90,7 @@
             <label class="campo-simple">Hora de inicio<input type="time" name="hora_inicio" value="19:00"></label>
             <label class="campo-simple">Duración (horas)<input type="number" name="horas" min="1" max="24" placeholder="Automático según el evento"></label>
           </div>
-          <p class="suave" style="margin-top:.8rem;font-size:.88rem"><i class="fa-regular fa-clock"></i> Se cobra por jornadas de 4 horas. Una fiesta electrónica suele durar 8 horas (2 jornadas).</p>
+          <p class="suave" style="margin-top:.8rem;font-size:.88rem"><i class="fa-regular fa-clock"></i> El precio es por evento de hasta 6 horas. Cada hora de más suma la parte proporcional a mitad de precio (una fiesta electrónica de 8 horas con el Combo grande: S/ 100 más).</p>
           <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
         </section>
 
@@ -104,6 +104,12 @@
             <label class="opcion"><input type="checkbox" name="dj"><i class="fa-solid fa-compact-disc"></i>DJ</label>
             <label class="opcion"><input type="checkbox" name="proyeccion"><i class="fa-solid fa-tv"></i>Pantalla / videos</label>
             <label class="opcion"><input type="checkbox" name="luces" checked><i class="fa-solid fa-lightbulb"></i>Luces de ambiente</label>
+          </div>
+          <%# Solo se muestra si marcó orquesta o banda: con esto se ajusta al rider técnico del grupo. %>
+          <div class="campos" id="datos-grupo" hidden style="margin-top:1.2rem">
+            <label class="campo-simple">¿Cuántos integrantes tiene el grupo?<input type="number" name="integrantes" min="1" max="20" placeholder="Ej.: 6"></label>
+            <label class="campo-simple">¿Cuántas horas toca el grupo?<input type="number" name="horas_grupo" min="1" max="12" placeholder="Ej.: 4"></label>
+            <label class="casilla ancho"><input type="checkbox" name="trae_monitoreo"> El grupo trae su propio monitoreo (si no, llevamos 4 monitores de retorno)</label>
           </div>
           <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button><button type="button" class="btn btn-primario" data-siguiente>Siguiente <i class="fa-solid fa-arrow-right"></i></button></div>
         </section>
@@ -123,6 +129,14 @@
             <div id="mapa" role="application" aria-label="Mapa para elegir el lugar del evento"></div>
             <div class="info-ruta" id="info-ruta" hidden></div>
           </div>
+          <%# El transporte va incluido en paquetes pequeños y medianos solo si el vehículo llega hasta el lugar. %>
+          <fieldset class="pregunta-acceso">
+            <legend>¿El vehículo puede llegar hasta el mismo lugar del evento?</legend>
+            <div class="opciones-grid">
+              <label class="opcion"><input type="radio" name="acceso_vehicular" value="si" checked><i class="fa-solid fa-truck"></i>Sí, llega hasta la puerta</label>
+              <label class="opcion"><input type="radio" name="acceso_vehicular" value="no"><i class="fa-solid fa-person-walking"></i>No, hay que caminar o subir escaleras</label>
+            </div>
+          </fieldset>
           <div class="paso-acciones"><button type="button" class="btn btn-ghost" data-anterior><i class="fa-solid fa-arrow-left"></i> Atrás</button>
             <button type="button" class="btn btn-primario magnetico" id="btn-recomendar"><i class="fa-solid fa-wand-magic-sparkles"></i> Ver mi propuesta</button>
           </div>

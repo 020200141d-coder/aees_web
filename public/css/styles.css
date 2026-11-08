@@ -670,3 +670,7 @@ body.cursor-hover .cursor-anillo { width: 60px; height: 60px; margin: -30px 0 0 
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   [data-reveal], .hero-anim { opacity: 1; translate: none; }
 }
+
+/* Asistente: pregunta de acceso vehicular (paso del mapa). Sin el borde por defecto del fieldset. */
+.pregunta-acceso { border: 0; padding: 0; margin: 1.4rem 0 0; min-width: 0; }
+.pregunta-acceso legend { font-weight: 600; margin-bottom: .7rem; padding: 0; }

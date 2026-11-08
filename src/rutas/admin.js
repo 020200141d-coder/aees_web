@@ -17,10 +17,12 @@ const crypto = require('node:crypto');
 const db = require('../db');
 const catalogo = require('../servicios/catalogo');
 const reservasSrv = require('../servicios/reservas');
+const precios = require('../servicios/precios');
 const negocio = require('../servicios/negocio');
 const { requiereStaff, requiereClave, claveVigente, iniciarSesionPersonal, emailPrincipal, CONFIRMACION_MIN } = require('../middleware/auth');
 const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
 const { CATEGORIAS, TIPOS_EVENTO, ESTADOS_RESERVA, texto, numero, hoyLima } = require('../lib/util');
+const util = require('../lib/util');
 const TABLAS = require('../db/tablas');
 
 const router = express.Router();
@@ -99,7 +101,7 @@ router.post('/salir', (req, res) => {
 
 // Acciones delicadas: piden la contraseña (ver requiereClave en middleware/auth.js).
 // Se decide por la ruta para que ninguna nueva ruta de eliminar quede sin protección.
-const esDelicada = req => req.method === 'POST' && (req.path.endsWith('/eliminar') || req.path.startsWith('/usuarios') || req.path.startsWith('/respaldo'));
+const esDelicada = req => req.method === 'POST' && (req.path.endsWith('/eliminar') || req.path.endsWith('/precio') || req.path.startsWith('/usuarios') || req.path.startsWith('/respaldo'));
 router.use((req, res, next) => (esDelicada(req) ? requiereClave(req, res, next) : next()));
 
 // ── Inicio / agenda ─────────────────────────────────────────────────────────
@@ -463,6 +465,42 @@ router.post('/reservas/:codigo/notas', soloAdmin, a(async (req, res, next) => {
   res.redirect(`/admin/reservas/${r.codigo}`);
 }));
 
+// Ajuste manual del precio de UNA reserva (descuento especial, cambio de
+// equipos acordado en la reunión...). El precio de una reserva queda
+// congelado al crearla: cambiar las tarifas en Ajustes NO la modifica. Solo
+// este formulario puede cambiarlo, con estas protecciones:
+//  • pide la contraseña (esDelicada) y un motivo obligatorio;
+//  • no se toca una reserva completada, cancelada o expirada;
+//  • el total no puede quedar por debajo de lo que el cliente ya pagó;
+//  • cada cambio queda en el historial (quién, cuándo, de cuánto a cuánto, estado y pagado).
+const ESTADOS_SIN_CAMBIO_PRECIO = ['completada', 'cancelada', 'expirada'];
+router.post('/reservas/:codigo/precio', soloAdmin, a(async (req, res, next) => {
+  const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
+  if (!r) return next();
+  const volver = `/admin/reservas/${r.codigo}`;
+  const nuevo = Math.round(numero(req.body.total_nuevo, NaN) * 100) / 100;
+  const motivo = texto(req.body.motivo, 300);
+  const pagado = Number(r.pagado || 0);
+  let error = null;
+  if (ESTADOS_SIN_CAMBIO_PRECIO.includes(r.estado)) error = `La reserva está "${ESTADOS_RESERVA[r.estado]}": su precio ya no se puede cambiar.`;
+  else if (!(nuevo >= 0)) error = 'Escribe el nuevo total.';
+  else if (nuevo < pagado) error = `El total no puede ser menor a lo que el cliente ya pagó (${util.soles(pagado)}).`;
+  else if (motivo.length < 5) error = 'Escribe el motivo del cambio (queda en el historial).';
+  else if (nuevo === Number(r.total)) error = 'El total es el mismo.';
+  if (error) { req.flash('error', error); return res.redirect(volver); }
+
+  const adelanto = Math.round(nuevo * Number(r.adelanto_pct) / 100 * 100) / 100;
+  const historial = [...(r.encuesta?.historial_precios || []), {
+    fecha: new Date().toISOString(), por: req.usuario.email, de: Number(r.total), a: nuevo,
+    adelanto_de: Number(r.adelanto), adelanto_a: adelanto, motivo, estado: r.estado, pagado
+  }];
+  await db.actualizar('reservas', r.id, { total: nuevo, adelanto, encuesta: { ...(r.encuesta || {}), historial_precios: historial } });
+  // Si con el nuevo adelanto lo pagado ya alcanza, la reserva pasa sola a "adelanto pagado".
+  await reservasSrv.recalcular(r.id);
+  req.flash('exito', `Total de ${r.codigo}: ${util.soles(r.total)} → ${util.soles(nuevo)}.`);
+  res.redirect(volver);
+}));
+
 // Pago manual en efectivo / transferencia que el admin registra a mano.
 router.post('/reservas/:codigo/pago-manual', soloAdmin, a(async (req, res, next) => {
   const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
@@ -561,8 +599,9 @@ router.post('/promociones/:id/eliminar', soloAdmin, a(async (req, res) => {
 
 // ── Ajustes del negocio (admin) ─────────────────────────────────────────────
 router.get('/ajustes', soloAdmin, a(async (req, res) => {
-  const [n, reglas, vehiculos, portada] = await Promise.all(['negocio', 'reglas', 'vehiculos', 'portada'].map(k => db.ajuste(k)));
-  res.render('admin/ajustes', { titulo: 'Ajustes', n: n || {}, reglas: reglas || {}, vehiculos: vehiculos || [], portada: portada || {}, errores: {} });
+  // Las reglas se leen con sus valores por defecto (precios.reglas) para que los campos nuevos no salgan vacíos.
+  const [n, vehiculos, portada, reglas] = await Promise.all([...['negocio', 'vehiculos', 'portada'].map(k => db.ajuste(k)), precios.reglas()]);
+  res.render('admin/ajustes', { titulo: 'Ajustes', n: n || {}, reglas, vehiculos: vehiculos || [], portada: portada || {}, errores: {} });
 }));
 
 router.post('/ajustes/negocio', soloAdmin, a(async (req, res) => {
@@ -595,18 +634,28 @@ router.post('/ajustes/negocio', soloAdmin, a(async (req, res) => {
 
 router.post('/ajustes/reglas', soloAdmin, a(async (req, res) => {
   const b = req.body;
+  // Se parte de lo guardado: así no se pierden reglas que este formulario no muestra.
+  const actuales = await precios.reglas();
+  const vehiculosGratis = [].concat(b.vehiculos_transporte_gratis || []).map(v => texto(v, 20)).filter(Boolean);
   const r = {
+    ...actuales,
     adelanto_pct: numero(b.adelanto_pct, NaN),
     horas_bloqueo: entero(b.horas_bloqueo, NaN),
     horas_jornada: entero(b.horas_jornada, NaN),
-    factor_jornada_extra: numero(b.factor_jornada_extra, NaN),
-    tecnico_por_jornada: numero(b.tecnico_por_jornada, NaN),
+    factor_hora_extra: numero(b.factor_hora_extra, NaN),
+    tecnico_por_evento: numero(b.tecnico_por_evento, NaN),
     descuento_frecuente_pct: numero(b.descuento_frecuente_pct, NaN),
-    reservas_para_frecuente: entero(b.reservas_para_frecuente, NaN)
+    reservas_para_frecuente: entero(b.reservas_para_frecuente, NaN),
+    vehiculos_transporte_gratis: vehiculosGratis,
+    km_transporte_gratis: numero(b.km_transporte_gratis, NaN),
+    altura_max_gratis_m: entero(b.altura_max_gratis_m, NaN),
+    recargo_sin_acceso: numero(b.recargo_sin_acceso, NaN)
   };
+  delete r.factor_jornada_extra; delete r.tecnico_por_jornada; // nombres de la versión anterior
   const ok = r.adelanto_pct >= 10 && r.adelanto_pct <= 100 && r.horas_bloqueo >= 1 && r.horas_bloqueo <= 168 && r.horas_jornada >= 1 && r.horas_jornada <= 12 &&
-    r.factor_jornada_extra >= 0 && r.factor_jornada_extra <= 2 && r.tecnico_por_jornada >= 0 && r.descuento_frecuente_pct >= 0 && r.descuento_frecuente_pct <= 50 && r.reservas_para_frecuente >= 1;
-  if (!ok) { req.flash('error', 'Revisa los valores: adelanto 10–100 %, bloqueo 1–168 h, jornada 1–12 h, factor 0–2, descuento 0–50 %.'); return res.redirect('/admin/ajustes#reglas'); }
+    r.factor_hora_extra >= 0 && r.factor_hora_extra <= 2 && r.tecnico_por_evento >= 0 && r.descuento_frecuente_pct >= 0 && r.descuento_frecuente_pct <= 50 && r.reservas_para_frecuente >= 1 &&
+    r.km_transporte_gratis >= 0 && r.km_transporte_gratis <= 200 && r.altura_max_gratis_m >= 0 && r.altura_max_gratis_m <= 6000 && r.recargo_sin_acceso >= 0;
+  if (!ok) { req.flash('error', 'Revisa los valores: adelanto 10–100 %, bloqueo 1–168 h, horas del evento 1–12, factor 0–2, descuento 0–50 %, km 0–200, altura 0–6000 m.'); return res.redirect('/admin/ajustes#reglas'); }
   await db.guardarAjuste('reglas', r);
   req.flash('exito', 'Reglas de precios guardadas.');
   res.redirect('/admin/ajustes#reglas');

@@ -47,7 +47,9 @@ function normalizarCarrito(c = {}) {
     personas: Math.max(0, Math.round(numero(c.personas))),
     espacio: c.espacio === 'exterior' ? 'exterior' : 'interior',
     lugar: Number.isFinite(lat) && Number.isFinite(lng) ? { texto: texto(c.lugar.texto, 200), lat, lng } : null,
-    con_tecnico: c.con_tecnico !== false,
+    con_tecnico: c.con_tecnico === true,
+    // ¿El vehículo llega hasta el mismo lugar del evento? null = no respondió.
+    acceso_vehicular: c.acceso_vehicular === true || c.acceso_vehicular === 'si' ? true : c.acceso_vehicular === false || c.acceso_vehicular === 'no' ? false : null,
     encuesta: c.encuesta && typeof c.encuesta === 'object' ? JSON.parse(JSON.stringify(c.encuesta).slice(0, 4000)) : {},
     explicacion: texto(c.explicacion, 2000)
   };
@@ -76,8 +78,9 @@ async function preparar(carritoCrudo, { usuarioId, promoCodigo, excluirReservaId
 
   let ruta = null, envio = null;
   if (carrito.lugar && almacen) {
-    ruta = await rutas.ruta(almacen, carrito.lugar);
-    envio = await transporte.calcular(expandidos, mapa, ruta.km);
+    const [r, alturaM, reglas] = await Promise.all([rutas.ruta(almacen, carrito.lugar), rutas.altura(carrito.lugar), precios.reglas()]);
+    ruta = r;
+    envio = await transporte.calcular(expandidos, mapa, ruta.km, { acceso: carrito.acceso_vehicular ?? undefined, altura: alturaM, reglas });
   }
 
   const cotizacion = await precios.cotizar({
@@ -95,6 +98,7 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
   if (!carrito.fecha) throw errorUsuario('Elige la fecha del evento.');
   if (carrito.fecha < hoyLima()) throw errorUsuario('La fecha del evento ya pasó.');
   if (!carrito.lugar) throw errorUsuario('Marca en el mapa el lugar del evento para calcular el transporte.');
+  if (carrito.acceso_vehicular === null) throw errorUsuario('Cuéntanos si el vehículo puede llegar hasta el mismo lugar del evento.');
   if (p.faltan.length) throw errorUsuario('Algunos equipos ya no están disponibles para esa fecha.', 409, { faltan: p.faltan });
   if (cotizacion.error_promo) throw errorUsuario(cotizacion.error_promo);
 
@@ -129,7 +133,7 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
     promo_codigo: cotizacion.promo?.codigo || null,
     expira_en: new Date(Date.now() + r.horas_bloqueo * 3600 * 1000).toISOString(),
     datos_cliente: datosCliente,
-    encuesta: { ...carrito.encuesta, lineas: cotizacion.lineas, ruta: p.ruta ? { km: p.ruta.km, minutos: p.ruta.minutos, fuente: p.ruta.fuente, enlace_conductor: p.ruta.enlace_conductor } : null, carga: p.envio?.carga || null },
+    encuesta: { ...carrito.encuesta, acceso_vehicular: carrito.acceso_vehicular, horas_extra: cotizacion.horas_extra, transporte_detalle: p.envio ? { gratis: p.envio.gratis, tarifa: p.envio.tarifa, motivos: p.envio.motivos_cobro, recargo_sin_acceso: p.envio.recargo_sin_acceso, altura_m: p.envio.altura_m } : null, lineas: cotizacion.lineas, ruta: p.ruta ? { km: p.ruta.km, minutos: p.ruta.minutos, fuente: p.ruta.fuente, enlace_conductor: p.ruta.enlace_conductor } : null, carga: p.envio?.carga || null },
     explicacion: carrito.explicacion || null,
     reunion: null,
     notas_admin: ''
