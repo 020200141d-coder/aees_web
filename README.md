@@ -73,9 +73,11 @@
 
 > El hosting gratuito "se duerme" tras 15 minutos sin visitas. De 6:00 a 23:59 una tarea automática lo mantiene despierto; de madrugada, la primera carga puede tardar unos 50 segundos.
 
-| Portada | Asistente con IA |
+| Portada con cotizador rápido | En el celular |
 |---|---|
-| ![Portada](docs/capturas/portada.jpg) | ![Asistente para armar el evento](docs/capturas/asistente.jpg) |
+| ![Portada con el cotizador rápido](docs/capturas/portada.jpg) | <img src="docs/capturas/portada-movil.jpg" alt="Portada en el celular con barra fija Cotizar / WhatsApp" width="260"> |
+| **Paquetes en la portada ("Más elegido")** | **Asistente con IA** |
+| ![Paquetes con precio tachado y el más elegido](docs/capturas/portada-paquetes.jpg) | ![Asistente para armar el evento](docs/capturas/asistente.jpg) |
 | **Catálogo con disponibilidad** | **Combos y paquetes** |
 | ![Catálogo de equipos](docs/capturas/catalogo.jpg) | ![Combos](docs/capturas/combos.jpg) |
 
