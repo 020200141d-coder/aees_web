@@ -69,6 +69,23 @@
                   <button type="button" class="btn btn-ghost btn-sm" data-repetir="<%= r.codigo %>" title="Cargar estos equipos en Mi evento para otra fecha"><i class="fa-solid fa-rotate-right"></i> Repetir</button>
                 </td>
               </tr>
+              <%# Evento realizado y sin reseña: el cliente puede contar cómo le fue. %>
+              <% if (r.estado === 'completada' && !conResena.has(r.codigo)) { %>
+                <tr><td colspan="6">
+                  <details class="dejar-resena">
+                    <summary><i class="fa-regular fa-star"></i> ¿Cómo te fue en tu evento? Deja tu reseña</summary>
+                    <form method="post" action="/cuenta/resenas" style="display:grid;gap:.6rem;margin-top:.6rem">
+                      <input type="hidden" name="_csrf" value="<%= csrf %>">
+                      <input type="hidden" name="codigo" value="<%= r.codigo %>">
+                      <fieldset class="estrellas"><legend class="oculto-accesible">Estrellas</legend>
+                        <% [5, 4, 3, 2, 1].forEach(n => { %><input type="radio" id="e<%= n %>-<%= r.codigo %>" name="estrellas" value="<%= n %>" <%= n === 5 ? 'checked' : '' %>><label for="e<%= n %>-<%= r.codigo %>" title="<%= n %> estrellas">★</label><% }) %>
+                      </fieldset>
+                      <label class="campo-simple"><span class="oculto-accesible">Tu reseña</span><textarea name="texto" maxlength="500" required placeholder="Ej.: El sonido se escuchó perfecto y llegaron a tiempo."></textarea></label>
+                      <button class="btn btn-primario btn-sm" style="justify-self:start">Enviar reseña</button>
+                    </form>
+                  </details>
+                </td></tr>
+              <% } %>
             <% }) %>
           </tbody>
         </table>

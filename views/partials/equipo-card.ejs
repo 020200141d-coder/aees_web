@@ -1,0 +1,24 @@
+<%#
+  partials/equipo-card.ejs — tarjeta de un equipo (portada: destacados; /catalogo: todos).
+  Recibe `e` (equipo). Los data-* los usa public/js/main.js: abrir el detalle (modal),
+  filtrar por categoría, marcar disponibilidad por fecha y "+" para agregar a Mi evento.
+  La foto va en una caja de proporción fija (4:3), así todas las tarjetas miden igual.
+%>
+<% const { soles, CATEGORIAS } = util; const libre = e.estado === 'operativo' && e.cantidad_total > 0; %>
+<article class="equipo-card tilt" data-categoria="<%= e.categoria %>" data-equipo-card="<%= e.id %>" data-reveal>
+  <button class="equipo-abrir" data-equipo="<%= e.id %>" aria-label="Ver detalle de <%= e.nombre %>"></button>
+  <div class="equipo-visual">
+    <%- include('equipo-visual', { e }) %>
+    <span class="chip"><i class="<%= CATEGORIAS[e.categoria].icono %>"></i> <%= CATEGORIAS[e.categoria].label %></span>
+    <span class="chip estado <%= libre ? 'chip-ok' : 'chip-no' %>" data-estado><%= libre ? 'Disponible' : 'No disponible' %></span>
+  </div>
+  <div class="equipo-cuerpo">
+    <span class="marca"><%= e.marca %> · <%= e.modelo %></span>
+    <h3><%= e.nombre %></h3>
+    <div class="equipo-pie">
+      <span class="precio"><%= soles(e.precio) %> <small>/ evento</small></span>
+      <button class="btn-agregar" data-agregar="<%= e.id %>" aria-label="Agregar <%= e.nombre %> a mi evento" <%= libre ? '' : 'disabled' %>><i class="fa-solid fa-plus"></i></button>
+    </div>
+  </div>
+  <div class="brillo" aria-hidden="true"></div>
+</article>

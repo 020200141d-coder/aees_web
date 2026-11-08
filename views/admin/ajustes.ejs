@@ -19,6 +19,7 @@
     <label class="campo-simple">WhatsApp (con 51)<input name="whatsapp" value="<%= n.whatsapp %>" maxlength="11"><small class="ayuda">Ej. 51987166001</small></label>
     <label class="campo-simple">Correo<input name="correo" type="email" value="<%= n.correo %>"></label>
     <label class="campo-simple">Horario<input name="horario" value="<%= n.horario %>"></label>
+    <label class="campo-simple">Eventos realizados (número real)<input name="eventos_realizados" type="number" min="0" value="<%= n.eventos_realizados || '' %>"><small class="ayuda">Sale en la portada como "+N eventos". Vacío: se muestran los años de experiencia.</small></label>
     <label class="campo-simple ancho">Dirección<input name="direccion" value="<%= n.direccion %>"></label>
     <label class="campo-simple">Instagram (URL)<input name="instagram" value="<%= n.redes?.instagram %>"></label>
     <label class="campo-simple">Facebook (URL)<input name="facebook" value="<%= n.redes?.facebook %>"></label>
@@ -107,7 +108,8 @@
   <input type="hidden" name="_csrf" value="<%= csrf %>">
   <h2><i class="fa-regular fa-images"></i> Fotos de portada</h2>
   <div class="form-rejilla">
-    <% [['hero', 'Fondo principal (hero)'], ['boda', 'Tarjeta Bodas'], ['electronica', 'Tarjeta Fiesta electrónica'], ['corporativo', 'Tarjeta Corporativo']].forEach(([k, t]) => { %>
+    <%# El fondo es obligatorio; las otras tres son opcionales (fotos de respaldo por tipo de evento). %>
+    <% [['hero', 'Fondo principal de la portada (1920×1080)'], ['boda', 'Bodas (opcional)'], ['electronica', 'Fiesta electrónica (opcional)'], ['corporativo', 'Corporativo (opcional)']].forEach(([k, t]) => { %>
       <div class="ancho"><b style="font-size:.85rem"><%= t %></b><%- include('_foto', { nombre: k, valor: portada[k], error: null, formato: k === 'hero' ? '16:9' : '4:5' }) %></div>
     <% }) %>
     <label class="campo-simple ancho">Créditos de fotos (pie de página)<input name="fuentes" value="<%= portada.fuentes %>" maxlength="200"></label>

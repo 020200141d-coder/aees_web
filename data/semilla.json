@@ -1238,8 +1238,8 @@
       "imagen": "/img/eventos/aees-20260808_201245.jpg",
       "imagen_fuente": "AeeS Acústico (foto propia)",
       "publicado": true,
-      "destacado": true,
-      "orden": 2
+      "destacado": false,
+      "orden": 4
     },
     {
       "id": "combo-fiesta-150",

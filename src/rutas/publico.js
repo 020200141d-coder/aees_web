@@ -13,30 +13,74 @@ const db = require('../db');
 const catalogo = require('../servicios/catalogo');
 const pagos = require('../servicios/pagos');
 const precios = require('../servicios/precios');
+const resenas = require('../servicios/resenas');
+const { TIPOS_EVENTO } = require('../lib/util');
 const { requiereCliente } = require('../middleware/auth');
 const { hoyLima } = require('../lib/util');
 
 const router = express.Router();
 const a = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-// Servicios fijos del rubro (se muestran en el carrusel de la portada).
-const SERVICIOS = [
-  { id: 'sonido', titulo: 'Sonido', icono: 'fa-solid fa-volume-high', descripcion: 'Parlantes JBL, QSC, RCF y Bose, consolas digitales y micrófonos Shure y Sennheiser, dimensionados para tu cantidad de invitados.' },
-  { id: 'iluminacion', titulo: 'Iluminación', icono: 'fa-solid fa-lightbulb', descripcion: 'Uplighting cálido para bodas, cabezas móviles, hazer y DMX para fiestas electrónicas y conciertos.' },
-  { id: 'video', titulo: 'Video y pantallas LED', icono: 'fa-solid fa-tv', descripcion: 'Proyectores láser, pantallas de 100" y paneles LED P4 para conferencias, lanzamientos y conciertos.' },
-  { id: 'energia', titulo: 'Energía eléctrica', icono: 'fa-solid fa-bolt', descripcion: 'Generadores Honda y Kipor, tableros con protección y extensiones para eventos en el campo.' },
-  { id: 'estructuras', titulo: 'Estructuras', icono: 'fa-solid fa-cubes', descripcion: 'Torres y secciones de truss, tarimas de escenario y toldos para proteger los equipos.' },
-  { id: 'tecnico', titulo: 'Técnico en el evento', icono: 'fa-solid fa-sliders', descripcion: 'Montaje, prueba de sonido y operación durante el evento, con cables ordenados y etiquetados.' }
-];
 
+// Tipos de foto de la galería (filtros de /eventos).
+const TIPOS_PUB = { boda: 'Bodas', fiesta: 'Fiestas', concierto: 'Conciertos', corporativo: 'Corporativo', conferencia: 'Ceremonias', electronica: 'Electrónica' };
+
+// Combos ordenados (destacados primero) con su "precio suelto": lo que costarían
+// los mismos equipos por separado, para mostrar el ahorro con precio tachado.
+// El "Más elegido" es el destacado del medio (o el único destacado).
+function prepararCombos(combos, mapa) {
+  const lista = [...combos].sort((a, b) => (b.destacado - a.destacado) || (a.orden || 0) - (b.orden || 0)).map(c => {
+    const conDmx = (c.items || []).some(it => mapa[it.equipo_id]?.rol === 'dmx');
+    const suelto = (c.items || []).reduce((s, it) => s + (mapa[it.equipo_id] ? precios.precioUnitario(mapa[it.equipo_id], it.cantidad, conDmx) * it.cantidad : 0), 0);
+    return { ...c, precio_suelto: Math.round(suelto) };
+  });
+  const destacados = lista.filter(c => c.destacado);
+  return { lista, destacados, elegidoId: (destacados[1] || destacados[0])?.id || null };
+}
+
+// Promociones activas y vigentes (se muestran arriba en la portada).
+async function promosVigentes() {
+  const hoy = hoyLima();
+  return (await db.listar('promociones', { filtro: { activo: true } })).filter(p => !p.vence || p.vence >= hoy).slice(0, 3);
+}
+
+// Portada: un RESUMEN. Cada sección lleva a su página completa.
 router.get('/', a(async (req, res) => {
-  const [equipos, combos, publicaciones, reglas] = await Promise.all([
+  const [equipos, combos, publicaciones, reglas, promos, listaResenas] = await Promise.all([
     catalogo.equipos(),
     catalogo.combos(),
     db.listar('publicaciones', { filtro: { publicado: true }, orden: 'orden' }),
-    precios.reglas()
+    precios.reglas(),
+    promosVigentes(),
+    resenas.publicadas()
   ]);
-  res.render('publico/index', { titulo: null, equipos, combos, publicaciones, reglas, servicios: SERVICIOS, mapa: catalogo.mapaPorId(equipos) });
+  const mapa = catalogo.mapaPorId(equipos);
+  // Destacados del catálogo: los que el admin marcó (por orden), hasta 3; si faltan, se completan.
+  const marcados = equipos.filter(e => e.destacado).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  const destacados = [...marcados, ...equipos.filter(e => !e.destacado)].slice(0, 3);
+  const { destacados: paquetes, lista: todosCombos, elegidoId } = prepararCombos(combos, mapa);
+  res.render('publico/index', {
+    titulo: null, equipos: destacados, total_equipos: equipos.length, publicaciones, reglas, promos, resenas: listaResenas.slice(0, 6),
+    paquetes: (paquetes.length ? paquetes : todosCombos).slice(0, 3), elegidoId, total_combos: combos.length, mapa, hoy: hoyLima(), TIPOS_EVENTO
+  });
+}));
+
+router.get('/catalogo', a(async (req, res) => {
+  const [equipos, reglas] = await Promise.all([catalogo.equipos(), precios.reglas()]);
+  const ordenados = [...equipos].sort((a, b) => (b.destacado - a.destacado) || (a.orden || 0) - (b.orden || 0));
+  res.render('publico/catalogo', { titulo: 'Catálogo de equipos', equipos: ordenados, reglas, hoy: hoyLima() });
+}));
+
+router.get('/combos', a(async (req, res) => {
+  const [equipos, combos, reglas] = await Promise.all([catalogo.equipos({ soloPublicados: false }), catalogo.combos(), precios.reglas()]);
+  const mapa = catalogo.mapaPorId(equipos);
+  const { lista, elegidoId } = prepararCombos(combos, mapa);
+  res.render('publico/combos', { titulo: 'Combos y paquetes', combos: lista, elegidoId, mapa, reglas });
+}));
+
+router.get('/eventos', a(async (req, res) => {
+  const [publicaciones, listaResenas] = await Promise.all([db.listar('publicaciones', { filtro: { publicado: true }, orden: 'orden' }), resenas.publicadas()]);
+  res.render('publico/eventos', { titulo: 'Eventos realizados', publicaciones, resenas: listaResenas, TIPOS_PUB });
 }));
 
 router.get('/asistente', a(async (req, res) => {

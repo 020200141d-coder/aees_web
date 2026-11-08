@@ -1,0 +1,37 @@
+<%#
+  partials/combo-card.ejs — tarjeta de un combo o paquete.
+  Recibe `c` (combo con c.precio_suelto calculado en la ruta), `mapa` (id → equipo)
+  y `elegido` (true = el "Más elegido": se resalta con borde dorado).
+  El precio tachado es lo que costarían los mismos equipos por separado: así el
+  cliente ve cuánto ahorra (solo se muestra si de verdad es más caro por separado).
+%>
+<% const { soles } = util; const ahorro = c.precio_suelto > c.precio ? c.precio_suelto - c.precio : 0; %>
+<article class="combo-card tilt<%= elegido ? ' combo-elegido' : '' %>" data-reveal>
+  <% if (elegido) { %><span class="cinta-elegido"><i class="fa-solid fa-star"></i> Más elegido</span><% } %>
+  <div class="combo-foto">
+    <% if (c.imagen) { %><img src="<%= c.imagen %>" alt="<%= c.nombre %>" loading="lazy"><% } %>
+    <span class="chip chip-oro"><i class="fa-solid fa-users"></i> <%= c.personas_min %>–<%= c.personas_max %> personas</span>
+  </div>
+  <div class="combo-cuerpo">
+    <h3><%= c.nombre %></h3>
+    <p><%= c.descripcion %></p>
+    <div class="combo-precio">
+      <% if (ahorro) { %><s class="precio-antes"><%= soles(c.precio_suelto) %></s><% } %>
+      <strong><%= soles(c.precio) %></strong><small>/ <%= c.horas_base %> h</small>
+      <% if (ahorro) { %><span class="chip chip-ok">Ahorras <%= soles(ahorro) %></span><% } %>
+    </div>
+    <ul class="lista-check">
+      <% c.items.forEach(it => { %><li><%= it.cantidad %>× <%= mapa[it.equipo_id]?.nombre || it.equipo_id %></li><% }) %>
+    </ul>
+    <% if (c.adicionales?.length) { %>
+      <div class="combo-adicionales">
+        <% c.adicionales.forEach(ad => { %><span><b>+ <%= soles(ad.precio) %></b> <%= ad.etiqueta %></span><% }) %>
+      </div>
+    <% } %>
+    <div class="combo-acciones">
+      <button class="btn btn-primario btn-sm magnetico" data-combo="<%= c.id %>" data-combo-nombre="<%= c.nombre %>" data-combo-horas="<%= c.horas_base %>"><i class="fa-solid fa-calendar-plus"></i> Reservar</button>
+      <a href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent(`Hola AeeS, me interesa el ${c.nombre}. ¿Está disponible para mi fecha?`) %>" class="btn btn-ghost btn-sm" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Preguntar</a>
+    </div>
+  </div>
+  <div class="brillo" aria-hidden="true"></div>
+</article>

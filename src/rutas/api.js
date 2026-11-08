@@ -4,6 +4,7 @@
 //   GET  /api/equipos?fecha=        catálogo con unidades libres ese día
 //   POST /api/interpretar           texto libre → campos de la encuesta (IA)
 //   POST /api/recomendar            encuesta → 3 opciones + combo + transporte + clima + explicación IA
+//   POST /api/cotizacion-rapida     cotizador de la portada: "Desde S/ …" al instante (sin IA ni mapa)
 //   GET  /api/geocodificar?q=       buscar un lugar (mapa)
 //   POST /api/ruta                  almacén → lugar: km, minutos, línea para el mapa
 //   GET  /api/clima                 pronóstico del día del evento
@@ -143,6 +144,55 @@ router.post('/recomendar', limiteIA, a(async (req, res) => {
     explicacion,
     ia_activa: ia.activa(),
     categorias: CATEGORIAS
+  });
+}));
+
+// ── Cotizador rápido de la portada ──────────────────────────────────────────
+// Con 4 datos (tipo, personas, lugar cerrado/abierto, acceso vehicular) y la
+// fecha opcional, aplica las MISMAS reglas del asistente (recomendador.js) y
+// devuelve el precio "desde": el paquete sugerido o la opción esencial. No usa
+// IA ni mapas, así responde en milisegundos mientras el cliente mueve los datos.
+const limiteRapido = limitar({ clave: 'rapido', max: 60, ventanaMin: 5 });
+router.post('/cotizacion-rapida', limiteRapido, a(async (req, res) => {
+  const b = req.body || {};
+  const encuesta = {
+    tipo_evento: TIPOS_EVENTO[b.tipo_evento] ? b.tipo_evento : 'otro',
+    personas: Math.min(3000, Math.max(5, Math.round(numero(b.personas, 60)))),
+    espacio: b.espacio === 'exterior' ? 'exterior' : 'interior',
+    extras: { luces: false, dj: b.tipo_evento === 'fiesta_electronica' }
+  };
+  const fecha = fechaValida(b.fecha);
+  const acceso = b.acceso_vehicular !== false;
+  const [equipos, combos, reglas] = await Promise.all([catalogo.equipos({ soloPublicados: false }), catalogo.combos(), precios.reglas()]);
+  const mapa = catalogo.mapaPorId(equipos);
+  const libres = fecha ? await catalogo.disponibilidad(fecha) : Object.fromEntries(equipos.map(e => [e.id, e.estado === 'operativo' ? e.cantidad_total : 0]));
+  const rec = recomendar(encuesta, { mapa, libres, combos });
+
+  // Paquete sugerido si encaja con las personas; si no, la opción esencial.
+  const combo = rec.combo && encuesta.personas <= rec.combo.personas_max * 1.1 ? rec.combo : null;
+  const items = combo ? [] : rec.opciones[0].items;
+  const cot = await precios.cotizar({ combo, items, horas: rec.horas, conTecnico: false }, mapa);
+  const expandidos = catalogo.expandir({ combo, items });
+  // ¿Entra en un vehículo con transporte incluido? (falta confirmar distancia y altura con el mapa)
+  const auto = (await transporte.vehiculos()).filter(v => (reglas.vehiculos_transporte_gratis || []).includes(v.id));
+  const c = transporte.carga(expandidos, mapa);
+  const cabe = auto.some(v => c.volumen_l <= v.capacidad_l * 0.85 && c.peso_kg <= v.capacidad_kg && c.largo_cm <= v.largo_max_cm);
+  const faltan = fecha ? catalogo.faltantes(expandidos, libres, mapa) : [];
+
+  const params = new URLSearchParams({ tipo: encuesta.tipo_evento, personas: encuesta.personas, espacio: encuesta.espacio, acceso: acceso ? 'si' : 'no', ...(fecha ? { fecha } : {}) });
+  res.json({
+    ok: true,
+    desde: cot.subtotal,
+    desde_texto: soles(cot.subtotal),
+    horas: rec.horas,
+    nombre: combo ? combo.nombre : 'Sonido a tu medida',
+    combo_id: combo?.id || null,
+    resumen: (combo ? combo.items : items).filter(it => mapa[it.equipo_id]?.categoria === 'audio').slice(0, 4).map(it => `${it.cantidad}× ${mapa[it.equipo_id]?.nombre}`).join(' · '),
+    transporte_incluido: cabe && acceso,
+    sin_acceso: !acceso,
+    fecha,
+    disponible: fecha ? faltan.length === 0 : null,
+    url_asistente: `/asistente?${params}`
   });
 }));
 

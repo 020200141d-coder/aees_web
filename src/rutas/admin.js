@@ -18,6 +18,7 @@ const db = require('../db');
 const catalogo = require('../servicios/catalogo');
 const reservasSrv = require('../servicios/reservas');
 const precios = require('../servicios/precios');
+const resenas = require('../servicios/resenas');
 const negocio = require('../servicios/negocio');
 const { requiereStaff, requiereClave, claveVigente, iniciarSesionPersonal, emailPrincipal, CONFIRMACION_MIN } = require('../middleware/auth');
 const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
@@ -36,14 +37,14 @@ router.use(async (req, res, next) => {
   res.locals.CATEGORIAS = CATEGORIAS;
   res.locals.TIPOS_EVENTO = TIPOS_EVENTO;
   res.locals.ESTADOS_RESERVA = ESTADOS_RESERVA;
-  res.locals.pendientes = { mensajes: 0, yape: 0 };
+  res.locals.pendientes = { mensajes: 0, yape: 0, resenas: 0 };
   // admin.js lo lee para no pedir la contraseña otra vez si se confirmó hace poco.
   res.locals.claveVigente = claveVigente(req);
   res.locals.CONFIRMACION_MIN = CONFIRMACION_MIN;
   if (['admin'].includes(req.usuario?.rol)) {
     try {
       const [msjs, pagos] = await Promise.all([db.listar('mensajes', { filtro: { leido: false } }), db.listar('pagos', { filtro: { estado: 'pendiente' } })]);
-      res.locals.pendientes = { mensajes: msjs.length, yape: pagos.filter(p => p.metodo === 'yape').length };
+      res.locals.pendientes = { mensajes: msjs.length, yape: pagos.filter(p => p.metodo === 'yape').length, resenas: (await resenas.todas()).filter(x => !x.publicado && x.origen === 'cliente').length };
     } catch (err) { return next(err); }
   }
   next();
@@ -552,6 +553,43 @@ router.post('/pagos/:id/:accion', soloAdmin, a(async (req, res, next) => {
   res.redirect(req.body.volver ? volverSeguro(req.body.volver) : `/admin/reservas/${r.codigo}`);
 }));
 
+// ── Reseñas (admin y publicador) ────────────────────────────────────────────
+// CRUD sobre src/servicios/resenas.js. Las de clientes llegan sin publicar.
+router.get('/resenas', staff, a(async (req, res) => {
+  const lista = await resenas.todas();
+  const editar = req.query.editar ? lista.find(x => x.id === req.query.editar) || null : null;
+  res.render('admin/resenas', { titulo: 'Reseñas', lista: [...lista].reverse(), editar, datos: editar || {}, errores: {} });
+}));
+
+async function guardarResena(req, res, id) {
+  const { datos, errores } = resenas.validar(req.body);
+  datos.publicado = marcado(req.body.publicado);
+  datos.orden = entero(req.body.orden, 0);
+  if (Object.keys(errores).length) {
+    const lista = await resenas.todas();
+    return res.status(400).render('admin/resenas', { titulo: 'Reseñas', lista: [...lista].reverse(), editar: id ? { id } : null, datos, errores });
+  }
+  if (id) await resenas.actualizar(id, datos); else await resenas.agregar(datos, { origen: 'admin', publicado: datos.publicado });
+  req.flash('exito', id ? 'Reseña actualizada.' : 'Reseña agregada.');
+  res.redirect('/admin/resenas');
+}
+router.post('/resenas', staff, a((req, res) => guardarResena(req, res, null)));
+router.post('/resenas/:id', staff, a((req, res) => guardarResena(req, res, req.params.id)));
+
+router.post('/resenas/:id/publicado', staff, a(async (req, res, next) => {
+  const x = (await resenas.todas()).find(r => r.id === req.params.id);
+  if (!x) return next();
+  await resenas.actualizar(x.id, { publicado: !x.publicado });
+  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, publicado: !x.publicado });
+  res.redirect('/admin/resenas');
+}));
+
+router.post('/resenas/:id/eliminar', staff, a(async (req, res) => {
+  await resenas.eliminar(req.params.id);
+  req.flash('exito', 'Reseña eliminada.');
+  res.redirect('/admin/resenas');
+}));
+
 // ── Clientes (admin) ────────────────────────────────────────────────────────
 router.get('/clientes', soloAdmin, a(async (req, res) => {
   const [usuarios, reservas] = await Promise.all([db.listar('usuarios', { filtro: { rol: 'cliente' }, orden: 'creado_en', desc: true }), db.listar('reservas')]);
@@ -653,6 +691,7 @@ router.post('/ajustes/negocio', soloAdmin, a(async (req, res) => {
     correo: texto(b.correo, 120),
     direccion: texto(b.direccion, 160),
     horario: texto(b.horario, 80),
+    eventos_realizados: Math.max(0, Math.round(numero(b.eventos_realizados, 0))) || null,
     redes: { instagram: urlImagen(b.instagram) ?? '', facebook: urlImagen(b.facebook) ?? '', tiktok: urlImagen(b.tiktok) ?? '' },
     almacen: { lat, lng, direccion: texto(b.almacen_direccion, 160) },
     yape: { numero: String(b.yape_numero || '').replace(/\D/g, '').slice(0, 9), titular: texto(b.yape_titular, 80), qr_url: urlImagen(b.yape_qr) || '' },
@@ -720,10 +759,8 @@ router.post('/ajustes/vehiculos', soloAdmin, a(async (req, res) => {
 
 router.post('/ajustes/portada', soloAdmin, a(async (req, res) => {
   const p = {};
-  for (const k of ['hero', 'boda', 'electronica', 'corporativo']) {
-    p[k] = urlImagen(req.body[k]);
-    if (!p[k]) { req.flash('error', 'Cada foto de portada necesita una URL válida o una foto subida.'); return res.redirect('/admin/ajustes#portada'); }
-  }
+  for (const k of ['hero', 'boda', 'electronica', 'corporativo']) p[k] = urlImagen(req.body[k]) || '';
+  if (!p.hero) { req.flash('error', 'La foto de fondo de la portada necesita una URL válida o una foto subida.'); return res.redirect('/admin/ajustes#portada'); }
   p.fuentes = texto(req.body.fuentes, 200);
   await db.guardarAjuste('portada', p);
   negocio.invalidar();

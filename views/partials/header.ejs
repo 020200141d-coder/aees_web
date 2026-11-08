@@ -13,12 +13,11 @@
       <%- include('logo', { clase: 'logo-header' }) %>
     </a>
 
+    <%# Cada sección tiene su página; en la portada solo hay un resumen. %>
     <ul class="nav-links" id="nav-links">
-      <li><a href="<%= ir('servicios') %>" <%= enPortada ? 'data-scroll' : '' %>>Servicios</a></li>
-      <li><a href="<%= ir('combos') %>" <%= enPortada ? 'data-scroll' : '' %>>Combos</a></li>
-      <li><a href="<%= ir('equipos') %>" <%= enPortada ? 'data-scroll' : '' %>>Equipos</a></li>
-      <li><a href="<%= ir('eventos') %>" <%= enPortada ? 'data-scroll' : '' %>>Eventos</a></li>
-      <li><a href="/asistente" class="<%= rutaActual === '/asistente' ? 'activo' : '' %>">Arma tu evento</a></li>
+      <% [['/catalogo', 'Catálogo'], ['/combos', 'Combos'], ['/eventos', 'Eventos'], ['/asistente', 'Arma tu evento']].forEach(([href, texto]) => { %>
+        <li><a href="<%= href %>" class="<%= rutaActual === href ? 'activo' : '' %>" <%= rutaActual === href ? 'aria-current="page"' : '' %>><%= texto %></a></li>
+      <% }) %>
       <li><a href="<%= ir('contacto') %>" <%= enPortada ? 'data-scroll' : '' %>>Contacto</a></li>
     </ul>
 

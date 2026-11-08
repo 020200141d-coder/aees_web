@@ -74,8 +74,10 @@ const COMBOS = [
 ];
 // Combos que los paquetes nuevos reemplazan: se ocultan (no se borran).
 const OCULTAR = ['combo-social-100', 'combo-fiesta-150'];
-// El line array completo sigue, ahora por evento de 6 h.
+// El line array completo sigue, ahora por evento de 6 h, pero ya no como destacado:
+// en la portada se destacan solo los 3 paquetes (pequeño, mediano y grande).
 const HORAS_6 = ['combo-line-array'];
+const NO_DESTACAR = ['combo-line-array'];
 
 const REGLAS = {
   horas_jornada: 6, factor_hora_extra: 0.5, tecnico_por_evento: 150,
@@ -91,7 +93,8 @@ function aplicar({ equipos, combos, reglas, negocio }) {
   const resto = combos.filter(c => !COMBOS.some(n => n.id === c.id)).map(c => ({
     ...c,
     publicado: OCULTAR.includes(c.id) ? false : c.publicado,
-    destacado: OCULTAR.includes(c.id) ? false : c.destacado,
+    destacado: OCULTAR.includes(c.id) || NO_DESTACAR.includes(c.id) ? false : c.destacado,
+    orden: NO_DESTACAR.includes(c.id) ? Math.max(4, c.orden || 0) : c.orden,
     horas_base: HORAS_6.includes(c.id) ? 6 : c.horas_base
   }));
   const r = { ...reglas, ...REGLAS };

@@ -735,13 +735,21 @@ function initPalabrasSonoras() {
   const partir = nodo => {
     [...nodo.childNodes].forEach(hijo => {
       if (hijo.nodeType === Node.TEXT_NODE && hijo.textContent.trim()) {
+        // Cada palabra va en un span que no se parte: así en el celular una
+        // palabra larga baja entera a la siguiente línea (antes se cortaba letra por letra).
         const frag = document.createDocumentFragment();
-        [...hijo.textContent].forEach(ch => {
-          if (ch === ' ') { frag.append(' '); return; }
-          const s = document.createElement('span');
-          s.className = 'letra';
-          s.textContent = ch;
-          frag.append(s);
+        hijo.textContent.split(/( +)/).forEach(trozo => {
+          if (!trozo) return;
+          if (!trozo.trim()) { frag.append(trozo); return; }
+          const palabra = document.createElement('span');
+          palabra.className = 'palabra';
+          [...trozo].forEach(ch => {
+            const s = document.createElement('span');
+            s.className = 'letra';
+            s.textContent = ch;
+            palabra.append(s);
+          });
+          frag.append(palabra);
         });
         hijo.replaceWith(frag);
       } else if (hijo.nodeType === Node.ELEMENT_NODE && !hijo.matches('i, svg, .oculto-accesible')) {

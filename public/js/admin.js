@@ -82,10 +82,16 @@
   // ── Subir foto: encuadrar, reducir y convertir a WebP en el navegador ────
   // 1. Cropper.js muestra la foto con un marco de la proporción donde se usará
   //    (data-formato), así una foto vertical no deforma una tarjeta horizontal.
-  // 2. Se exporta a máx. 1600 px por lado en WebP (~150–300 KB; si el navegador
-  //    no sabe hacer WebP, en JPEG).
+  // 2. Se exporta EXACTAMENTE al tamaño del espacio donde se mostrará (TAMANO):
+  //    así todas las fotos de un mismo lugar miden igual en la página, sin
+  //    importar si se subió un JPG del celular, un PNG o una foto enorme.
+  //    Formato WebP (~150–300 KB; si el navegador no sabe hacer WebP, en JPEG).
+  //    Se aceptan JPG, PNG, WebP, GIF, BMP y AVIF; HEIC (iPhone) solo si el
+  //    navegador lo abre (Safari sí): si no, se pide una captura o JPG.
   // 3. Se envía en base64 a POST /admin/fotos, que la guarda y devuelve la URL.
   const PROPORCION = { '4:3': 4 / 3, '3:4': 3 / 4, '16:9': 16 / 9, '16:10': 16 / 10, '4:5': 4 / 5, '1:1': 1 };
+  // Tamaño final en píxeles de cada proporción (ancho × alto).
+  const TAMANO = { '4:3': [1200, 900], '3:4': [900, 1200], '16:9': [1920, 1080], '16:10': [1280, 800], '4:5': [960, 1200], '1:1': [800, 800] };
 
   function exportar(canvas) {
     const webp = canvas.toDataURL('image/webp', 0.82);
@@ -100,8 +106,9 @@
     }
     const escala = Math.min(1, 1600 / Math.max(w, h));
     const c = document.createElement('canvas');
-    c.width = Math.round(w * escala);
-    c.height = Math.round(h * escala);
+    const fijo = Object.entries(PROPORCION).find(([, p]) => p === proporcion)?.[0];
+    c.width = fijo ? TAMANO[fijo][0] : Math.round(w * escala);
+    c.height = fijo ? TAMANO[fijo][1] : Math.round(h * escala);
     c.getContext('2d').drawImage(img, x, y, w, h, 0, 0, c.width, c.height);
     return exportar(c);
   }
@@ -112,7 +119,7 @@
       const img = await new Promise((ok, mal) => {
         const i = new Image();
         i.onload = () => ok(i);
-        i.onerror = () => mal(new Error('No se pudo leer la imagen.'));
+        i.onerror = () => mal(new Error('Este navegador no puede abrir ese formato (por ejemplo HEIC del iPhone). Sube una captura o una foto JPG/PNG.'));
         i.src = url;
       });
       if (!window.Cropper || !hayAlertas) return recorteCentrado(img, PROPORCION[formato]);
@@ -132,7 +139,14 @@
           cropper = new Cropper(el.querySelector('#img-recorte'), { aspectRatio: PROPORCION[formato] || (formato === 'libre' ? 4 / 3 : NaN), viewMode: 1, autoCropArea: 1, background: false });
           el.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => cropper.setAspectRatio(PROPORCION[b.dataset.prop] || NaN)));
         },
-        preConfirm: () => exportar(cropper.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingQuality: 'high' }))
+        // Proporción fija → tamaño exacto del espacio; libre → máx. 1600 px.
+        preConfirm: () => {
+          const prop = cropper.options.aspectRatio;
+          const fijo = Object.entries(PROPORCION).find(([, p]) => Math.abs(p - prop) < 0.001)?.[0];
+          return exportar(cropper.getCroppedCanvas(fijo
+            ? { width: TAMANO[fijo][0], height: TAMANO[fijo][1], imageSmoothingQuality: 'high' }
+            : { maxWidth: 1600, maxHeight: 1600, imageSmoothingQuality: 'high' }));
+        }
       });
       cropper?.destroy();
       return r.isConfirmed ? r.value : null;

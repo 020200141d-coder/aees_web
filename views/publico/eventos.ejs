@@ -1,0 +1,39 @@
+<%#
+  publico/eventos.ejs — galería de eventos realizados (página propia, /eventos).
+  Fotos reales que el admin sube en Admin → Galería. Al tocar una se abre en grande.
+%>
+<% const tiposGaleria = [...new Set(publicaciones.map(p => p.tipo))]; %>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <section id="eventos" class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Eventos</span>
+      <h1>Eventos <span class="texto-acento">realizados</span></h1>
+      <p>Fotos reales de nuestros montajes. Toca una para verla en grande.</p>
+    </header>
+    <div class="barra-catalogo">
+      <div class="filtros" role="toolbar" aria-label="Filtrar eventos" data-filtros="galeria">
+        <button class="filtro activo" data-filtro="todos" aria-pressed="true">Todos <small><%= publicaciones.length %></small></button>
+        <% tiposGaleria.forEach(t => { %><button class="filtro" data-filtro="<%= t %>" aria-pressed="false"><%= TIPOS_PUB[t] || t %> <small><%= publicaciones.filter(p => p.tipo === t).length %></small></button><% }) %>
+        <span class="filtros-indicador" aria-hidden="true"></span>
+      </div>
+    </div>
+    <div class="galeria" data-grid="galeria">
+      <% publicaciones.forEach(p => { %>
+        <button class="foto-card" data-categoria="<%= p.tipo %>" data-foto="<%= p.id %>" data-reveal>
+          <img src="<%= p.imagen %>" alt="<%= p.titulo %>" loading="lazy">
+          <figcaption><small><%= TIPOS_PUB[p.tipo] || p.tipo %></small><b><%= p.titulo %></b></figcaption>
+        </button>
+      <% }) %>
+    </div>
+    <p class="sin-resultados" data-vacio="galeria" hidden>Pronto subiremos fotos de este tipo de evento.</p>
+    <% if (resenas.length) { %>
+      <h2 style="margin:3rem 0 1rem">Lo que dicen nuestros clientes</h2>
+      <div class="resenas-grid"><% resenas.forEach(x => { %><%- include('../partials/resena', { x }) %><% }) %></div>
+    <% } %>
+  </section>
+</main>
+<%- include('../partials/modales') %>
+<%- include('../partials/footer') %>

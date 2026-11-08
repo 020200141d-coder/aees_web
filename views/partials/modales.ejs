@@ -1,0 +1,44 @@
+<%#
+  partials/modales.ejs — ventanas que rellena public/js/main.js:
+   • detalle de un equipo (si la página trae `equipos`): ficha, crédito de la foto y "Agregar a mi evento";
+   • foto grande de la galería (si la página trae `publicaciones`).
+  Los datos viajan como JSON dentro de la página para no hacer otra petición al abrirlos.
+%>
+<% const { CATEGORIAS } = util; %>
+<% if (typeof equipos !== 'undefined' && equipos.length) { %>
+<script type="application/json" id="datos-equipos"><%- JSON.stringify(equipos.map(e => ({ id: e.id, nombre: e.nombre, marca: e.marca, modelo: e.modelo, categoria: e.categoria, categoriaLabel: CATEGORIAS[e.categoria].label, icono: CATEGORIAS[e.categoria].icono, descripcion: e.descripcion, precio: e.precio, precio_mayor: e.precio_mayor, mayor_desde: e.mayor_desde, ajuste_sin_dmx: e.ajuste_sin_dmx, cantidad_total: e.cantidad_total, potencia_w: e.potencia_w, spl_db: e.spl_db, cobertura_personas: e.cobertura_personas, dimensiones: e.dimensiones, peso_kg: e.peso_kg, estado: e.estado, imagen_fuente: e.imagen_fuente, imagen_fuente_url: e.imagen_fuente_url }))).replace(/</g, '\u003c') %></script>
+<dialog class="modal" id="modal-equipo" aria-labelledby="modal-titulo">
+  <div class="modal-contenido">
+    <button class="modal-cerrar btn-icono" data-cerrar-modal aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-visual" id="modal-visual"></div>
+    <div class="modal-cuerpo">
+      <span class="chip" id="modal-cat"></span> <span class="chip" id="modal-estado"></span>
+      <h3 id="modal-titulo"></h3>
+      <p id="modal-detalle"></p>
+      <div class="ficha" id="modal-ficha"></div>
+      <p class="credito-foto" id="modal-credito" hidden></p>
+      <div class="modal-nav">
+        <button class="btn btn-ghost btn-sm" data-modal-nav="-1"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+        <button class="btn btn-primario btn-sm" id="modal-agregar"><i class="fa-solid fa-plus"></i> Agregar a mi evento</button>
+        <button class="btn btn-ghost btn-sm" data-modal-nav="1">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+    </div>
+  </div>
+</dialog>
+<% } %>
+<% if (typeof publicaciones !== 'undefined' && publicaciones.length) { %>
+<script type="application/json" id="datos-galeria"><%- JSON.stringify(publicaciones.map(p => ({ id: p.id, titulo: p.titulo, texto: p.texto, imagen: p.imagen, tipo: p.tipo }))).replace(/</g, '\u003c') %></script>
+<dialog class="modal modal-foto" id="modal-foto" aria-label="Foto del evento">
+  <figure class="modal-contenido">
+    <button class="modal-cerrar btn-icono" data-cerrar-modal aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    <img src="" alt="" id="foto-grande">
+    <figcaption><h3 id="foto-titulo"></h3><p id="foto-texto"></p>
+      <div class="modal-nav" style="border:0;padding-top:.8rem">
+        <button class="btn btn-ghost btn-sm" data-foto-nav="-1"><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+        <a href="/asistente" class="btn btn-primario btn-sm">Quiero algo así</a>
+        <button class="btn btn-ghost btn-sm" data-foto-nav="1">Siguiente <i class="fa-solid fa-arrow-right"></i></button>
+      </div>
+    </figcaption>
+  </figure>
+</dialog>
+<% } %>

@@ -1,0 +1,41 @@
+<%#
+  publico/catalogo.ejs — catálogo completo de equipos (página propia, /catalogo).
+  En la portada solo se ven los destacados; aquí están todos, con filtros por
+  categoría y disponibilidad por fecha (public/js/main.js: initFiltros, initDisponibilidad).
+%>
+<% const { CATEGORIAS } = util; %>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <section id="equipos" class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Catálogo</span>
+      <h1>Equipos <span class="texto-acento">para tu evento</span></h1>
+      <p>Precio por evento de hasta <%= reglas.horas_jornada %> horas. Elige una fecha para ver qué está libre ese día y súmalo a tu evento con <i class="fa-solid fa-plus"></i>.</p>
+    </header>
+    <div class="barra-catalogo">
+      <div class="filtros" role="toolbar" aria-label="Filtrar por categoría" data-filtros="equipos">
+        <button class="filtro activo" data-filtro="todos" aria-pressed="true">Todos <small><%= equipos.length %></small></button>
+        <% Object.entries(CATEGORIAS).forEach(([id, c]) => { const n = equipos.filter(e => e.categoria === id).length; if (n) { %>
+          <button class="filtro" data-filtro="<%= id %>" aria-pressed="false"><%= c.label %> <small><%= n %></small></button>
+        <% } }) %>
+        <span class="filtros-indicador" aria-hidden="true"></span>
+      </div>
+      <label class="fecha-disponibilidad"><i class="fa-regular fa-calendar"></i> Disponibilidad para
+        <input type="date" id="fecha-catalogo" min="<%= hoy %>">
+      </label>
+    </div>
+    <div class="grid-equipos" data-grid="equipos" data-stagger>
+      <% equipos.forEach(e => { %><%- include('../partials/equipo-card', { e }) %><% }) %>
+    </div>
+    <p class="sin-resultados" data-vacio="equipos" hidden>No hay equipos en esta categoría todavía.</p>
+    <div class="cta-final">
+      <p>¿No sabes qué elegir?</p>
+      <a href="/asistente" class="btn btn-coral"><i class="fa-solid fa-wand-magic-sparkles"></i> Que el asistente lo arme por ti</a>
+      <a href="/combos" class="btn btn-ghost">Ver paquetes con descuento</a>
+    </div>
+  </section>
+</main>
+<%- include('../partials/modales') %>
+<%- include('../partials/footer') %>

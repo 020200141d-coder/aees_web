@@ -1,0 +1,25 @@
+<%#
+  publico/combos.ejs — todos los combos y paquetes (página propia, /combos).
+  El "Más elegido" es el destacado del medio que marcó el admin (ver rutas/publico.js).
+%>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <section id="combos" class="contenedor">
+    <header class="pagina-titulo">
+      <span class="seccion-num">Combos</span>
+      <h1>Paquetes <span class="texto-acento">que ahorran</span></h1>
+      <p>Precio por evento de <%= reglas.horas_jornada %> horas. Los paquetes pequeño y mediano llevan el transporte incluido en Cusco con acceso vehicular.</p>
+    </header>
+    <div class="grid-combos" data-stagger>
+      <% combos.forEach(c => { %><%- include('../partials/combo-card', { c, mapa, elegido: c.id === elegidoId }) %><% }) %>
+    </div>
+    <div class="cta-final">
+      <p>¿Necesitas algo distinto?</p>
+      <a href="/asistente" class="btn btn-coral"><i class="fa-solid fa-wand-magic-sparkles"></i> Arma tu evento a medida</a>
+      <a href="/catalogo" class="btn btn-ghost">Ver equipos sueltos</a>
+    </div>
+  </section>
+</main>
+<%- include('../partials/footer') %>

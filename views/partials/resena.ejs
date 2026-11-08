@@ -1,0 +1,6 @@
+<%# partials/resena.ejs — una reseña real de cliente (src/servicios/resenas.js). Recibe `x`. %>
+<figure class="resena">
+  <div class="resena-estrellas" aria-label="<%= x.estrellas %> de 5 estrellas"><%= '★'.repeat(x.estrellas) %><span><%= '★'.repeat(5 - x.estrellas) %></span></div>
+  <blockquote>“<%= x.texto %>”</blockquote>
+  <figcaption><b><%= x.nombre %></b><% if (x.evento) { %> · <small><%= x.evento %></small><% } %></figcaption>
+</figure>

@@ -112,10 +112,18 @@
   // Recuperar respuestas anteriores y el ?tipo= de los enlaces de la portada.
   const previo = AeesEvento.leer();
   if (previo.encuesta) rellenar(previo.encuesta);
-  const tipoUrl = new URLSearchParams(location.search).get('tipo');
-  if (tipoUrl) rellenar({ tipo_evento: tipoUrl });
+  // Desde la portada llegan los datos del cotizador rápido (?tipo, personas, espacio, acceso, fecha)
+  // o el texto libre del cotizador con IA (?texto): así el cliente no repite lo que ya escribió.
+  const q = new URLSearchParams(location.search);
+  if (q.get('tipo') || q.get('personas')) {
+    rellenar({
+      tipo_evento: q.get('tipo'), personas: Number(q.get('personas')) || null, espacio: ['interior', 'exterior'].includes(q.get('espacio')) ? q.get('espacio') : null,
+      fecha: q.get('fecha'), acceso_vehicular: q.get('acceso') === 'no' ? false : undefined
+    });
+  }
 
   // ── Paso 0: texto libre con IA ────────────────────────────────────────────
+  // Si viene ?texto= desde la portada, se escribe y se interpreta solo (ver al final).
   $$('[data-ejemplo]').forEach(b => b.addEventListener('click', () => { $('#texto-libre').value = b.dataset.ejemplo; $('#texto-libre').focus(); }));
 
   $('#btn-interpretar').addEventListener('click', async () => {
@@ -285,6 +293,11 @@
     });
     AeesSonido.confirmar();
     window.location.href = '/mi-evento';
+  }
+
+  if (q.get('texto')) {
+    $('#texto-libre').value = q.get('texto').slice(0, 1500);
+    setTimeout(() => $('#btn-interpretar').click(), 300);
   }
 
   $('#btn-recomendar').addEventListener('click', async () => {

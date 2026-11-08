@@ -23,6 +23,8 @@ const db = require('../db');
 const { verificarClave, limitar } = require('../lib/seguridad');
 const precios = require('../servicios/precios');
 const puntos = require('../servicios/puntos');
+const resenas = require('../servicios/resenas');
+const { TIPOS_EVENTO } = require('../lib/util');
 const { requiereCliente, DIAS_CLIENTE } = require('../middleware/auth');
 const { texto } = require('../lib/util');
 
@@ -129,7 +131,36 @@ router.get('/', requiereCliente, a(async (req, res) => {
       : { combo_id: null, adicionales: [], items: (x.items || []).map(({ equipo_id, cantidad }) => ({ equipo_id, cantidad })) };
     return [x.codigo, { ...carrito, horas: x.horas, personas: x.personas, espacio: x.espacio, tipo_evento: x.tipo_evento, lugar: x.lat ? { texto: x.lugar, lat: x.lat, lng: x.lng } : null, acceso_vehicular: x.encuesta?.acceso_vehicular ?? null }];
   }));
-  res.render('cuenta/panel', { titulo: 'Mi cuenta', reservas: mias, saldo, frecuente, reglas: r, repetir });
+  // Reseñas: una por cada evento completado; se muestra cuáles ya tienen la suya.
+  const conResena = new Set((await resenas.todas()).filter(x => x.usuario_id === req.usuario.id).map(x => x.reserva_codigo));
+  res.render('cuenta/panel', { titulo: 'Mi cuenta', reservas: mias, saldo, frecuente, reglas: r, repetir, conResena });
+}));
+
+// El cliente deja su reseña de un evento COMPLETADO (una por reserva).
+// Llega sin publicar: el admin la revisa en Admin → Reseñas.
+router.post('/resenas', requiereCliente, a(async (req, res) => {
+  const codigo = texto(req.body.codigo, 20);
+  const reserva = await db.buscarUno('reservas', { codigo });
+  if (!reserva || reserva.usuario_id !== req.usuario.id || reserva.estado !== 'completada') {
+    req.flash('error', 'Solo puedes dejar una reseña de tus eventos ya realizados.');
+    return res.redirect('/cuenta');
+  }
+  if ((await resenas.todas()).some(x => x.reserva_codigo === codigo)) {
+    req.flash('aviso', 'Ya dejaste tu reseña de ese evento. ¡Gracias!');
+    return res.redirect('/cuenta');
+  }
+  const tipo = TIPOS_EVENTO[reserva.tipo_evento]?.label || 'Evento';
+  const { datos, errores } = resenas.validar({ ...req.body, nombre: req.usuario.nombre, evento: `${tipo} · ${reserva.fecha_evento.slice(0, 4)}` });
+  if (Object.keys(errores).length) {
+    req.flash('error', Object.values(errores).join(' '));
+    return res.redirect('/cuenta');
+  }
+  // Para la portada basta el nombre y la inicial del apellido.
+  const partes = datos.nombre.split(' ');
+  datos.nombre = partes.length > 1 ? `${partes[0]} ${partes[1][0]}.` : partes[0];
+  await resenas.agregar(datos, { origen: 'cliente', reserva_codigo: codigo, usuario_id: req.usuario.id });
+  req.flash('exito', '¡Gracias por tu reseña! La publicaremos después de revisarla.');
+  res.redirect('/cuenta');
 }));
 
 module.exports = router;

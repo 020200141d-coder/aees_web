@@ -1,0 +1,45 @@
+<%#
+  admin/resenas.ejs — reseñas de clientes (CRUD).
+  Las que dejan los clientes desde "Mi cuenta" llegan sin publicar: revísalas y
+  publícalas con el interruptor. "Orden": la menor sale primero en la portada.
+  Solo reseñas reales: escribe aquí las que te dejaron por WhatsApp o en persona, con su permiso.
+%>
+<% const err = k => errores[k] ? `<span class="campo-error">${errores[k]}</span>` : ''; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera"><div><h1>Reseñas</h1><p>Lo que dicen tus clientes. Las publicadas salen en la portada, junto a las fotos de eventos.</p></div></header>
+<div class="rejilla rejilla-2">
+  <div class="tabla-caja">
+    <table class="tabla">
+      <thead><tr><th>Cliente</th><th>Reseña</th><th>Origen</th><th>Publicada</th><th></th></tr></thead>
+      <tbody>
+        <% if (!lista.length) { %><tr><td colspan="5" class="suave">Aún no hay reseñas. Cuando un evento se complete, el cliente podrá dejar la suya desde "Mi cuenta".</td></tr><% } %>
+        <% lista.forEach(x => { %>
+          <tr>
+            <td><b><%= x.nombre %></b><br><small class="suave"><%= x.evento || '' %></small></td>
+            <td><span style="color:var(--primario)"><%= '★'.repeat(x.estrellas) %></span><br><small><%= x.texto %></small></td>
+            <td><small><%= x.origen === 'cliente' ? `Cliente${x.reserva_codigo ? ` · ${x.reserva_codigo}` : ''}` : 'Admin' %></small></td>
+            <td><button type="button" class="interruptor" role="switch" aria-checked="<%= Boolean(x.publicado) %>" aria-label="Publicar reseña de <%= x.nombre %>" data-alternar="/admin/resenas/<%= x.id %>/publicado"></button></td>
+            <td class="acciones" style="flex-wrap:nowrap">
+              <a class="btn-icono" href="/admin/resenas?editar=<%= x.id %>" aria-label="Editar"><i class="fa-solid fa-pen"></i></a>
+              <form method="post" action="/admin/resenas/<%= x.id %>/eliminar" data-confirmar="¿Eliminar la reseña de <%= x.nombre %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn-icono" aria-label="Eliminar"><i class="fa-regular fa-trash-can"></i></button></form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <form method="post" action="<%= editar ? `/admin/resenas/${editar.id}` : '/admin/resenas' %>" class="tarjeta" novalidate>
+    <h2><%= editar ? 'Editar reseña' : 'Nueva reseña' %></h2>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple<%= errores.nombre ? ' error' : '' %>">Nombre del cliente<input name="nombre" value="<%= datos.nombre || '' %>" maxlength="60" placeholder="Rosa Q."><%- err('nombre') %></label>
+      <label class="campo-simple">Evento<input name="evento" value="<%= datos.evento || '' %>" maxlength="80" placeholder="Boda en Urubamba, 2026"></label>
+      <label class="campo-simple">Estrellas<select name="estrellas"><% [5, 4, 3, 2, 1].forEach(n => { %><option value="<%= n %>" <%= Number(datos.estrellas || 5) === n ? 'selected' : '' %>><%= '★'.repeat(n) %></option><% }) %></select></label>
+      <label class="campo-simple">Orden<input name="orden" type="number" value="<%= datos.orden || 0 %>"></label>
+      <label class="campo-simple ancho<%= errores.texto ? ' error' : '' %>">Reseña<textarea name="texto" maxlength="500"><%= datos.texto || '' %></textarea><%- err('texto') %></label>
+      <label class="casilla ancho"><input type="checkbox" name="publicado" <%= datos.publicado ? 'checked' : '' %>> Publicada en la portada</label>
+    </div>
+    <div class="form-pie"><% if (editar) { %><a href="/admin/resenas" class="btn btn-ghost btn-sm">Cancelar</a><% } %><button class="btn btn-primario btn-sm"><%= editar ? 'Guardar cambios' : 'Agregar reseña' %></button></div>
+  </form>
+</div>
+<%- include('_fin') %>
