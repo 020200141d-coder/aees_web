@@ -9,6 +9,7 @@ data/db.local.json.tmp
 public/uploads/
 # Comprobantes de pago en modo local (privados)
 data/comprobantes/
+data/respaldos/
 # Mensajes antiguos del portafolio
 mensajes/
 # Registros y archivos del sistema

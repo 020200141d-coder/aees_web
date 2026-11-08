@@ -986,9 +986,28 @@ router.post('/usuarios/:id/eliminar', soloAdmin, a(async (req, res) => {
 // ── Respaldo (admin) ────────────────────────────────────────────────────────
 // Útil siempre (copia de seguridad) y obligatorio si usas el modo local en un
 // hosting gratis, donde el disco se borra al redesplegar.
-router.get('/respaldo', soloAdmin, (req, res) => {
-  res.render('admin/respaldo', { titulo: 'Respaldo', motor: db.motor });
-});
+router.get('/respaldo', soloAdmin, a(async (req, res) => {
+  const tareas = require('../servicios/tareas');
+  const automaticos = await tareas.listar().catch(() => []);
+  res.render('admin/respaldo', { titulo: 'Respaldo', motor: db.motor, automaticos, dias: tareas.DIAS_RESPALDO, tareaActiva: Boolean(process.env.TAREAS_TOKEN?.trim()) });
+}));
+
+// Descargar un respaldo automático (pide contraseña: ruta delicada /respaldo...).
+router.post('/respaldo/automatico', soloAdmin, a(async (req, res, next) => {
+  const nombre = texto(req.body.nombre, 120);
+  const archivo = await require('../servicios/tareas').leer(nombre);
+  if (!archivo) return next();
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="${nombre.split('/').pop()}"`);
+  res.send(archivo);
+}));
+
+// Hacer un respaldo automático ahora mismo (sin esperar a la tarea del día).
+router.post('/respaldo/ahora', soloAdmin, a(async (req, res) => {
+  const r = await require('../servicios/tareas').respaldoDiario();
+  req.flash('exito', `Respaldo guardado: ${r.archivo.split('/').pop()} (${r.kb} KB).`);
+  res.redirect('/admin/respaldo');
+}));
 
 // POST (no GET) para poder pedir la contraseña: el respaldo trae TODOS los datos,
 // incluidos los de los clientes, así que no debe bajarse con solo abrir un enlace.

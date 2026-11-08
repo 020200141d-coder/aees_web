@@ -30,7 +30,7 @@ function verificarClave(clave, guardado) {
 }
 
 // Rutas que reciben POST de servicios externos (no llevan nuestro token).
-const SIN_CSRF = ['/pagos/mercadopago/webhook'];
+const SIN_CSRF = ['/pagos/mercadopago/webhook', '/tareas/diaria'];
 
 function csrf(req, res, next) {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(24).toString('hex');

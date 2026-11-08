@@ -1,21 +1,49 @@
 <%#
-  admin/respaldo.ejs — descargar y restaurar TODOS los datos en un archivo JSON.
-  Restaurar: admin.js lee el archivo en el navegador y lo envía como JSON a
-  POST /admin/respaldo/restaurar (así no hace falta una librería de subida de archivos).
+  admin/respaldo.ejs — copias de seguridad de TODOS los datos (archivo JSON).
+  • Automáticos: GitHub Actions llama cada día a POST /tareas/diaria (src/servicios/tareas.js),
+    que guarda una copia en el almacenamiento PRIVADO "respaldos" y deja los últimos N días.
+    Esa misma consulta diaria evita que Supabase pause el proyecto gratis por inactividad.
+  • Manual: descargar ahora / restaurar desde un archivo.
+  Descargar o restaurar pide la contraseña (los archivos traen datos de clientes).
+  Restaurar: admin.js lee el archivo en el navegador y lo envía como JSON a POST /admin/respaldo/restaurar.
 %>
 <%- include('_inicio') %>
 <header class="admin-cabecera"><div><h1>Respaldo</h1><p>Base de datos actual: <b><%= motor === 'supabase' ? 'Supabase (PostgreSQL)' : 'archivo local (data/db.local.json)' %></b></p></div></header>
 <div class="rejilla rejilla-2">
   <section class="tarjeta">
-    <h2><i class="fa-solid fa-download"></i> Descargar respaldo</h2>
-    <p class="suave" style="margin-bottom:1rem">Un archivo con equipos, combos, reservas, pagos, clientes, mensajes y ajustes. Guárdalo cada semana o antes de cambios grandes.</p>
-    <%# Formulario POST (no enlace) para que pida la contraseña: el archivo trae los datos de los clientes. %>
-    <form method="post" action="/admin/respaldo/descargar" data-pedir-clave><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-file-arrow-down"></i> Descargar respaldo</button></form>
+    <h2><i class="fa-solid fa-clock-rotate-left"></i> Respaldos automáticos</h2>
+    <% if (tareaActiva) { %>
+      <p class="suave" style="margin-bottom:1rem">Cada día se guarda una copia privada y se conservan los últimos <%= dias %> días. Esa misma tarea mantiene activa la base de datos gratis de Supabase.</p>
+    <% } else { %>
+      <div class="aviso" style="margin-bottom:1rem"><i class="fa-solid fa-circle-info"></i>La tarea diaria aún no está activada: falta la variable <code>TAREAS_TOKEN</code> en Render y el secreto en GitHub. Mientras tanto puedes hacer un respaldo con el botón.</div>
+    <% } %>
+    <form method="post" action="/admin/respaldo/ahora" data-pedir-clave style="margin-bottom:1rem"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-solid fa-floppy-disk"></i> Hacer un respaldo ahora</button></form>
+    <% if (!automaticos.length) { %>
+      <p class="suave">Todavía no hay respaldos automáticos.</p>
+    <% } else { %>
+      <div class="lista-agenda">
+        <% automaticos.forEach(f => { %>
+          <div class="mensaje" style="display:flex;justify-content:space-between;align-items:center;gap:.6rem">
+            <span><b><%= f.nombre.split('/').pop().replace('aees-respaldo-', '').replace('.json', '') %></b><br><small class="suave"><%= Math.max(1, Math.round(f.tamano / 1024)) %> KB</small></span>
+            <form method="post" action="/admin/respaldo/automatico" data-pedir-clave><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="nombre" value="<%= f.nombre %>"><button class="btn-icono" aria-label="Descargar respaldo del <%= f.nombre %>"><i class="fa-solid fa-file-arrow-down"></i></button></form>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
   </section>
-  <section class="tarjeta">
-    <h2><i class="fa-solid fa-upload"></i> Restaurar</h2>
-    <p class="suave" style="margin-bottom:1rem"><% if (motor === 'supabase') { %>Actualiza o agrega los registros del archivo (no borra los que no estén en él).<% } else { %>Reemplaza los datos actuales por los del archivo.<% } %></p>
-    <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i class="fa-solid fa-file-import"></i> Elegir archivo .json<input type="file" accept="application/json,.json" hidden id="archivo-respaldo"></label>
-  </section>
+
+  <div style="display:grid;gap:1.2rem;align-content:start">
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-download"></i> Descargar respaldo actual</h2>
+      <p class="suave" style="margin-bottom:1rem">Un archivo con equipos, combos, reservas, pagos, clientes, mensajes y ajustes. Guárdalo también en tu PC o Drive antes de cambios grandes.</p>
+      <%# Formulario POST (no enlace) para que pida la contraseña: el archivo trae los datos de los clientes. %>
+      <form method="post" action="/admin/respaldo/descargar" data-pedir-clave><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-primario btn-sm"><i class="fa-solid fa-file-arrow-down"></i> Descargar respaldo</button></form>
+    </section>
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-upload"></i> Restaurar</h2>
+      <p class="suave" style="margin-bottom:1rem"><% if (motor === 'supabase') { %>Actualiza o agrega los registros del archivo (no borra los que no estén en él).<% } else { %>Reemplaza los datos actuales por los del archivo.<% } %> Sirve con un respaldo automático descargado.</p>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer"><i class="fa-solid fa-file-import"></i> Elegir archivo .json<input type="file" accept="application/json,.json" hidden id="archivo-respaldo"></label>
+    </section>
+  </div>
 </div>
 <%- include('_fin') %>

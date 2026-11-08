@@ -1,0 +1,54 @@
+# ============================================================================
+#  Mantenimiento automático (GitHub Actions, gratis en repositorios públicos)
+#
+#  1. respaldo (todos los días a las 6:00 de Lima):
+#     llama a POST /tareas/diaria con la clave TAREAS_TOKEN. El servidor:
+#       • consulta la base → Supabase gratis nunca se pausa por inactividad;
+#       • guarda un respaldo PRIVADO en Supabase Storage (bucket "respaldos")
+#         y conserva los últimos 30 días. El respaldo NO se sube a GitHub
+#         (este repositorio es público y el respaldo tiene datos de clientes).
+#  2. despertar (cada 14 min, de 6:00 a 23:59 de Lima):
+#     visita /salud para que Render gratis no "duerma" el sitio de día
+#     (dormido, la primera visita tarda ~1 minuto en cargar).
+#
+#  Configuración (una sola vez):
+#   • GitHub → Settings → Secrets and variables → Actions → New repository secret:
+#       TAREAS_TOKEN = la misma clave larga que pongas en Render.
+#   • Render → Environment → TAREAS_TOKEN = esa misma clave.
+#  Probar a mano: pestaña Actions → "Mantenimiento" → Run workflow.
+#  Nota: GitHub pausa los workflows programados si el repositorio pasa 60 días
+#  sin cambios; basta con volver a activarlo en la pestaña Actions.
+# ============================================================================
+name: Mantenimiento
+
+on:
+  schedule:
+    - cron: '0 11 * * *'             # 06:00 Lima (UTC−5): respaldo diario
+    - cron: '*/14 0-4,11-23 * * *'   # 06:00–23:59 Lima: mantener despierto el sitio
+  workflow_dispatch:                 # botón "Run workflow" para probar
+
+env:
+  SITIO: ${{ vars.SITIO_URL || 'https://aees-web.onrender.com' }}
+
+jobs:
+  respaldo:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 11 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Respaldo diario y mantener viva la base
+        env:
+          TAREAS_TOKEN: ${{ secrets.TAREAS_TOKEN }}
+        run: |
+          if [ -z "$TAREAS_TOKEN" ]; then echo "Falta el secreto TAREAS_TOKEN en GitHub."; exit 1; fi
+          # Render gratis puede tardar ~1 min en despertar: se reintenta.
+          curl -fsS --max-time 120 --retry 4 --retry-delay 20 --retry-all-errors \
+            -X POST -H "Authorization: Bearer $TAREAS_TOKEN" "$SITIO/tareas/diaria"
+
+  despertar:
+    if: github.event.schedule == '*/14 0-4,11-23 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Visitar /salud
+        run: curl -fsS --max-time 90 --retry 2 --retry-delay 15 "$SITIO/salud" > /dev/null

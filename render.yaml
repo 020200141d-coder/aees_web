@@ -34,5 +34,8 @@ services:
         sync: false
       - key: OPENWEATHER_API_KEY
         sync: false
+      # Clave de la tarea diaria (respaldo + Supabase activo). La misma va en GitHub → Secrets.
+      - key: TAREAS_TOKEN
+        sync: false
       - key: ORS_API_KEY
         sync: false

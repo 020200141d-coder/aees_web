@@ -23,6 +23,14 @@ const crypto = require('node:crypto');
 const TABLAS = require('./tablas');
 
 const RAIZ = path.join(__dirname, '..', '..');
+
+// Ruta segura de un archivo privado: solo letras, números, guiones, puntos y "/",
+// nunca ".." (así un nombre no puede salirse de su carpeta).
+function rutaPrivada(bucket, nombre) {
+  const base = process.env.VERCEL ? path.join(os.tmpdir(), bucket) : path.join(RAIZ, 'data', bucket);
+  const limpio = String(nombre).replace(/[^\w./-]/g, '_').split('/').filter(p => p && p !== '..').join(path.sep);
+  return path.join(base, limpio || '.');
+}
 const RUTA_SEMILLA = path.join(RAIZ, 'data', 'semilla.json');
 const RUTA_DB = process.env.VERCEL
   ? path.join(os.tmpdir(), 'aees-db.json')
@@ -148,19 +156,34 @@ module.exports = {
     return `/uploads/${nombre}`;
   },
 
-  // Archivos PRIVADOS (comprobantes de pago): fuera de public/, así nadie los
-  // abre con un enlace; solo el panel los entrega (GET /admin/pagos/:id/comprobante).
-  async guardarPrivado(nombre, buffer) {
-    const carpeta = process.env.VERCEL ? path.join(os.tmpdir(), 'comprobantes') : path.join(RAIZ, 'data', 'comprobantes');
-    fs.mkdirSync(carpeta, { recursive: true });
-    fs.writeFileSync(path.join(carpeta, path.basename(nombre)), buffer);
+  // Archivos PRIVADOS (comprobantes de pago y respaldos): fuera de public/, así
+  // nadie los abre con un enlace; solo el panel los entrega. `bucket` es la
+  // carpeta (data/comprobantes, data/respaldos), igual que los buckets de Supabase.
+  async guardarPrivado(nombre, buffer, tipo, bucket = 'comprobantes') {
+    const ruta = rutaPrivada(bucket, nombre);
+    fs.mkdirSync(path.dirname(ruta), { recursive: true });
+    fs.writeFileSync(ruta, buffer);
     return nombre;
   },
 
-  async leerPrivado(nombre) {
-    const carpeta = process.env.VERCEL ? path.join(os.tmpdir(), 'comprobantes') : path.join(RAIZ, 'data', 'comprobantes');
-    const ruta = path.join(carpeta, path.basename(nombre));
+  async leerPrivado(nombre, bucket = 'comprobantes') {
+    const ruta = rutaPrivada(bucket, nombre);
     return fs.existsSync(ruta) ? fs.readFileSync(ruta) : null;
+  },
+
+  // Lista los archivos de una carpeta privada: [{ nombre, tamano, creado }], del más nuevo al más viejo.
+  async listarPrivados(bucket = 'comprobantes', prefijo = '') {
+    const carpeta = rutaPrivada(bucket, prefijo || '.');
+    if (!fs.existsSync(carpeta)) return [];
+    return fs.readdirSync(carpeta).filter(n => fs.statSync(path.join(carpeta, n)).isFile()).map(n => {
+      const st = fs.statSync(path.join(carpeta, n));
+      return { nombre: prefijo ? `${prefijo}/${n}` : n, tamano: st.size, creado: st.mtime.toISOString() };
+    }).sort((a, b) => b.creado.localeCompare(a.creado));
+  },
+
+  async eliminarPrivado(nombre, bucket = 'comprobantes') {
+    const ruta = rutaPrivada(bucket, nombre);
+    if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
   },
 
   // Reemplaza todas las tablas que vengan en el respaldo; las demás quedan igual.

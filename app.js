@@ -73,6 +73,26 @@ app.get('/salud/base', async (req, res) => {
   res.json({ motor: db.motor, base, ms: Date.now() - inicio });
 });
 
+// Tarea diaria (respaldo + mantener viva la base). La llama GitHub Actions con
+// la cabecera "Authorization: Bearer TAREAS_TOKEN". Sin TAREAS_TOKEN configurado
+// la ruta no existe (404). La clave se compara en tiempo constante.
+app.post('/tareas/diaria', async (req, res) => {
+  const clave = process.env.TAREAS_TOKEN?.trim();
+  if (!clave) return res.sendStatus(404);
+  const enviada = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const crypto = require('node:crypto');
+  const a = Buffer.from(enviada), b = Buffer.from(clave);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ ok: false, error: 'Clave inválida.' });
+  try {
+    const resultado = await require('./src/servicios/tareas').respaldoDiario();
+    console.log('[tarea diaria]', JSON.stringify(resultado));
+    res.json({ ok: true, ...resultado });
+  } catch (err) {
+    console.error('[tarea diaria]', err.message);
+    res.status(500).json({ ok: false, error: 'La tarea falló (ver logs del servidor).' });
+  }
+});
+
 // ── 2. Estáticos ─────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: ES_PROD ? '7d' : 0 }));
 

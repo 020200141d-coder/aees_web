@@ -17,8 +17,23 @@ const TABLAS = require('./tablas');
 // colar un espacio o salto de línea, incluso en medio de la clave, y dejaría de
 // valer. Una URL o una clave nunca llevan espacios, así que se quitan todos.
 const sinEspacios = v => String(v || '').replace(/\s+/g, '');
+// fetch con UN reintento: si la conexión con Supabase se corta un instante
+// (pasa en los servidores gratis al despertar), se vuelve a intentar a los 0,6 s
+// en vez de mostrarle un error al cliente. Solo reintenta fallos de red, no
+// respuestas de la base (esas sí son errores reales).
+async function fetchConReintento(url, opciones) {
+  try {
+    return await fetch(url, opciones);
+  } catch (err) {
+    console.warn('[supabase] corte de red, reintentando:', err.message);
+    await new Promise(r => setTimeout(r, 600));
+    return fetch(url, opciones);
+  }
+}
+
 const cliente = createClient(sinEspacios(process.env.SUPABASE_URL), sinEspacios(process.env.SUPABASE_SERVICE_KEY), {
-  auth: { persistSession: false, autoRefreshToken: false }
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: fetchConReintento }
 });
 
 // Supabase devuelve { data, error }: convertimos el error en excepción para
@@ -91,21 +106,32 @@ module.exports = {
 
   // Archivos PRIVADOS (comprobantes de pago): bucket "comprobantes" SIN acceso
   // público. Solo el servidor (con la service key) los lee para mostrarlos en el panel.
-  async guardarPrivado(nombre, buffer, tipo) {
-    const subir = () => cliente.storage.from('comprobantes').upload(nombre, buffer, { contentType: tipo, upsert: false });
+  // `bucket`: 'comprobantes' (fotos de pagos) o 'respaldos' (copias diarias de la base).
+  async guardarPrivado(nombre, buffer, tipo, bucket = 'comprobantes') {
+    const subir = () => cliente.storage.from(bucket).upload(nombre, buffer, { contentType: tipo, upsert: true });
     let r = await subir();
     if (r.error && /bucket not found/i.test(r.error.message)) {
-      revisar(await cliente.storage.createBucket('comprobantes', { public: false }));
+      revisar(await cliente.storage.createBucket(bucket, { public: false }));
       r = await subir();
     }
     revisar(r);
     return nombre;
   },
 
-  async leerPrivado(nombre) {
-    const { data, error } = await cliente.storage.from('comprobantes').download(nombre);
+  async leerPrivado(nombre, bucket = 'comprobantes') {
+    const { data, error } = await cliente.storage.from(bucket).download(nombre);
     if (error || !data) return null;
     return Buffer.from(await data.arrayBuffer());
+  },
+
+  async listarPrivados(bucket = 'comprobantes', prefijo = '') {
+    const { data, error } = await cliente.storage.from(bucket).list(prefijo, { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+    if (error) return [];
+    return (data || []).filter(f => f.id).map(f => ({ nombre: prefijo ? `${prefijo}/${f.name}` : f.name, tamano: f.metadata?.size || 0, creado: f.created_at }));
+  },
+
+  async eliminarPrivado(nombre, bucket = 'comprobantes') {
+    revisar(await cliente.storage.from(bucket).remove([nombre]));
   },
 
   // upsert = inserta lo nuevo y actualiza lo que ya existe (por id).
