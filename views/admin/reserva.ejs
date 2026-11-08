@@ -69,6 +69,30 @@
       <% } %>
     </section>
 
+    <%# Editar datos del evento (si cambia la fecha se revisa el stock). El precio se cambia aparte. %>
+    <% if (!['completada', 'cancelada', 'expirada'].includes(r.estado)) { %>
+    <section class="tarjeta">
+      <details>
+        <summary class="btn btn-ghost btn-sm"><i class="fa-solid fa-pen-to-square"></i> Editar datos del evento</summary>
+        <form method="post" action="/admin/reservas/<%= r.codigo %>/editar" style="display:grid;gap:.6rem;margin-top:.8rem">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <div class="form-rejilla">
+            <label class="campo-simple">Fecha<input type="date" name="fecha_evento" value="<%= r.fecha_evento %>" required></label>
+            <label class="campo-simple">Hora<input type="time" name="hora_inicio" value="<%= r.hora_inicio || '' %>"></label>
+            <label class="campo-simple">Horas<input type="number" name="horas" min="1" max="24" value="<%= r.horas %>"></label>
+            <label class="campo-simple">Invitados<input type="number" name="personas" min="0" value="<%= r.personas || 0 %>"></label>
+            <label class="campo-simple">Tipo<select name="tipo_evento"><% Object.entries(TIPOS_EVENTO).forEach(([id, t]) => { %><option value="<%= id %>" <%= r.tipo_evento === id ? 'selected' : '' %>><%= t.label %></option><% }) %></select></label>
+            <label class="campo-simple">¿Llega el vehículo?<select name="acceso_vehicular"><option value="si" <%= r.encuesta?.acceso_vehicular !== false ? 'selected' : '' %>>Sí</option><option value="no" <%= r.encuesta?.acceso_vehicular === false ? 'selected' : '' %>>No</option></select></label>
+            <label class="campo-simple ancho">Lugar (texto)<input name="lugar" value="<%= r.lugar || '' %>" maxlength="200"></label>
+            <label class="casilla ancho"><input type="checkbox" name="permitir_faltantes"> Si cambia la fecha, reservar igual aunque falte un equipo (proveedor aliado)</label>
+          </div>
+          <small class="suave">El precio no cambia solo: si cambian las horas o los equipos, usa "Ajustar el precio".</small>
+          <button class="btn btn-primario btn-sm" style="justify-self:start">Guardar cambios</button>
+        </form>
+      </details>
+    </section>
+    <% } %>
+
     <section class="tarjeta">
       <h2><i class="fa-solid fa-note-sticky"></i> Notas internas</h2>
       <form method="post" action="/admin/reservas/<%= r.codigo %>/notas" style="display:grid;gap:.6rem">
@@ -82,7 +106,7 @@
   <div>
     <section class="tarjeta">
       <h2><i class="fa-solid fa-user"></i> Cliente</h2>
-      <p><b><%= dc.nombre %></b></p>
+      <p><b><%= dc.nombre %></b><% if (cliente) { %> · <a href="/admin/clientes/<%= cliente.id %>" style="color:var(--primario);font-size:.85rem">ver ficha</a><% } %></p>
       <p class="suave">DNI <%= dc.dni %> · <i class="fa-brands fa-whatsapp"></i> <%= dc.celular %><%= dc.correo ? ` · ${dc.correo}` : '' %></p>
       <% if (cliente) { %><p class="suave" style="font-size:.8rem">Cuenta: <%= cliente.email || cliente.celular %></p><% } %>
     </section>
@@ -121,6 +145,8 @@
         <button class="btn btn-primario btn-sm">Cambiar</button>
       </form>
       <p class="suave" style="font-size:.78rem;margin-top:.6rem">Flujo: pendiente → adelanto pagado → <b>confirmada</b> (después de la reunión) → completada.</p>
+      <%# Eliminar: para errores o pruebas (pide contraseña). Para el historial es mejor "Cancelada". %>
+      <form method="post" action="/admin/reservas/<%= r.codigo %>/eliminar" data-confirmar="¿Eliminar la reserva <%= r.codigo %> y sus pagos? Para el historial es mejor cambiarla a Cancelada." style="margin-top:.8rem"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-regular fa-trash-can"></i> Eliminar reserva</button></form>
     </section>
 
     <section class="tarjeta">

@@ -1,28 +1,58 @@
 <%#
-  admin/clientes.ejs — clientes registrados. Los que tienen N reservas pagadas o más
-  (Ajustes → reglas) son "frecuentes": reciben el descuento automático y pueden usar
-  promociones exclusivas. Desde aquí se les puede escribir por WhatsApp con una oferta.
+  admin/clientes.ejs — clientes (CRUD).
+  • Lista con búsqueda; "frecuente" = N reservas pagadas o más (Ajustes → reglas).
+  • Registrar un cliente nuevo con su Gmail y celular (llegó por WhatsApp o en persona):
+    después él puede entrar solo a la web con esos mismos datos.
+  • "Ver" abre su ficha: editar datos, puntos, reservas y "Nueva reserva para este cliente".
 %>
 <% const { soles } = util; %>
 <%- include('_inicio') %>
-<header class="admin-cabecera"><div><h1>Clientes</h1><p><%= clientes.length %> registrados · frecuente = <%= minimo %>+ reservas pagadas</p></div></header>
-<div class="tabla-caja">
-  <table class="tabla">
-    <thead><tr><th>Cliente</th><th>Contacto</th><th class="num">Reservas</th><th class="num">Pagadas</th><th class="num">Total</th><th>Último evento</th><th></th></tr></thead>
-    <tbody>
-      <% if (!clientes.length) { %><tr><td colspan="7" class="suave" style="text-align:center;padding:2rem">Aún no hay clientes registrados.</td></tr><% } %>
-      <% clientes.forEach(c => { const frecuente = c.pagadas >= minimo; %>
-        <tr>
-          <td><b><%= c.nombre %></b> <% if (frecuente) { %><span class="chip chip-oro"><i class="fa-solid fa-star"></i> Frecuente</span><% } %><br><small class="suave">desde <%= (c.creado_en || '').slice(0, 10) %><%= c.dni ? ` · DNI ${c.dni}` : '' %></small></td>
-          <td><small><%= c.celular || '' %><br><%= c.email || '' %></small></td>
-          <td class="num"><%= c.reservas %></td>
-          <td class="num"><%= c.pagadas %></td>
-          <td class="num"><%= soles(c.gastado) %></td>
-          <td><%= c.ultima || '—' %></td>
-          <td><% if (c.celular) { %><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= c.celular %>?text=<%= encodeURIComponent(frecuente ? `Hola ${c.nombre.split(' ')[0]}, gracias por confiar en AeeS Acústico. Como cliente frecuente tienes un descuento en tu próximo evento con el código FRECUENTE10.` : `Hola ${c.nombre.split(' ')[0]}, te saluda AeeS Acústico. ¿Tienes algún evento próximo? Tenemos combos con precio especial.`) %>"><i class="fa-brands fa-whatsapp"></i> <%= frecuente ? 'Enviar promo' : 'Escribir' %></a><% } %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+<header class="admin-cabecera">
+  <div><h1>Clientes</h1><p><%= total %> registrados · frecuente = <%= minimo %>+ reservas pagadas</p></div>
+  <a href="/admin/reservas/nueva" class="btn btn-primario btn-sm"><i class="fa-solid fa-calendar-plus"></i> Nueva reserva</a>
+</header>
+<div class="rejilla rejilla-2 clientes-rejilla">
+  <div>
+    <form class="barra-filtros" method="get">
+      <input type="search" name="q" value="<%= q %>" placeholder="Nombre, celular, correo o DNI" aria-label="Buscar cliente">
+      <button class="btn btn-ghost btn-sm">Buscar</button>
+    </form>
+    <div class="tabla-caja">
+      <table class="tabla">
+        <thead><tr><th>Cliente</th><th>Contacto</th><th class="num">Reservas</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody>
+          <% if (!clientes.length) { %><tr><td colspan="5" class="suave" style="text-align:center;padding:2rem"><%= q ? 'Nadie coincide con la búsqueda.' : 'Aún no hay clientes registrados.' %></td></tr><% } %>
+          <% clientes.forEach(c => { const frecuente = c.pagadas >= minimo; %>
+            <tr>
+              <td><b><%= c.nombre %></b> <% if (frecuente) { %><span class="chip chip-oro"><i class="fa-solid fa-star"></i> Frecuente</span><% } %><br><small class="suave">desde <%= (c.creado_en || '').slice(0, 10) %><%= c.dni ? ` · DNI ${c.dni}` : '' %></small></td>
+              <td><small><%= c.celular || '' %><br><%= c.email || '' %></small></td>
+              <td class="num"><%= c.reservas %><br><small class="suave"><%= c.pagadas %> pagadas</small></td>
+              <td class="num"><%= soles(c.gastado) %><br><small class="suave"><%= c.ultima || '—' %></small></td>
+              <td class="acciones" style="flex-wrap:nowrap">
+                <a class="btn btn-ghost btn-sm" href="/admin/clientes/<%= c.id %>">Ver</a>
+                <% if (c.celular) { %><a class="btn-icono" target="_blank" rel="noopener" aria-label="WhatsApp" href="https://wa.me/51<%= c.celular %>?text=<%= encodeURIComponent(`Hola ${c.nombre.split(' ')[0]}, te saluda AeeS Acústico.`) %>"><i class="fa-brands fa-whatsapp"></i></a><% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <form method="post" action="/admin/clientes" class="tarjeta" id="nuevo-cliente" novalidate>
+    <h2><i class="fa-solid fa-user-plus"></i> Registrar cliente</h2>
+    <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">Con su <b>Gmail y celular</b> podrá entrar solo a la web, ver sus reservas y sumar puntos.</p>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple ancho">Nombre y apellido<input name="nombre" maxlength="80" required <%= nuevo ? 'autofocus' : '' %>></label>
+      <label class="campo-simple">Celular (WhatsApp)<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" required></label>
+      <label class="campo-simple">Gmail<input name="email" type="email" maxlength="120" placeholder="cliente@gmail.com"></label>
+      <label class="campo-simple">DNI (opcional)<input name="dni" inputmode="numeric" maxlength="12"></label>
+    </div>
+    <div class="form-pie">
+      <button class="btn btn-ghost btn-sm">Guardar</button>
+      <button class="btn btn-primario btn-sm" name="y_reservar" value="1"><i class="fa-solid fa-calendar-plus"></i> Guardar y reservar</button>
+    </div>
+  </form>
 </div>
 <%- include('_fin') %>

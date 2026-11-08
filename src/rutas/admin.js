@@ -19,6 +19,7 @@ const catalogo = require('../servicios/catalogo');
 const reservasSrv = require('../servicios/reservas');
 const precios = require('../servicios/precios');
 const resenas = require('../servicios/resenas');
+const puntosSrv = require('../servicios/puntos');
 const negocio = require('../servicios/negocio');
 const { requiereStaff, requiereClave, claveVigente, iniciarSesionPersonal, emailPrincipal, CONFIRMACION_MIN } = require('../middleware/auth');
 const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
@@ -436,6 +437,43 @@ router.get('/reservas', soloAdmin, a(async (req, res) => {
   res.render('admin/reservas', { titulo: 'Reservas', reservas: lista, estado, q });
 }));
 
+// Nueva reserva desde el panel (por ejemplo, tocando un día del calendario).
+// Usa el MISMO servicio que la web (reservas.crear): mismos precios, stock,
+// transporte y descuentos del cliente. Diferencias: el admin elige al cliente,
+// puede registrar el adelanto que ya le pagaron y puede reservar aunque falte
+// un equipo (lo pone un proveedor aliado; queda anotado en la reserva).
+router.get('/reservas/nueva', soloAdmin, a(async (req, res) => {
+  const [clientes, equipos, combos, reglas] = await Promise.all([
+    db.listar('usuarios', { filtro: { rol: 'cliente' }, orden: 'nombre' }),
+    catalogo.equipos({ soloPublicados: true }),
+    catalogo.combos(),
+    precios.reglas()
+  ]);
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(req.query.fecha || '') && req.query.fecha >= hoyLima() ? req.query.fecha : '';
+  res.render('admin/reserva-nueva', { titulo: 'Nueva reserva', clientes, equipos, combos, reglas, fecha, clienteId: String(req.query.cliente || ''), hoy: hoyLima() });
+}));
+
+// Vista previa del precio para el formulario (con los descuentos de ESE cliente).
+router.post('/reservas/cotizar', soloAdmin, a(async (req, res) => {
+  const p = await reservasSrv.preparar(req.body?.carrito, { usuarioId: texto(req.body?.cliente_id, 60) || null, promoCodigo: texto(req.body?.promo, 30) });
+  res.json({ ok: true, cotizacion: p.cotizacion, faltan: p.faltan, combo: p.combo ? { adicionales: p.combo.adicionales || [] } : null });
+}));
+
+router.post('/reservas/nueva', soloAdmin, a(async (req, res) => {
+  const b = req.body || {};
+  const cliente = await db.obtener('usuarios', texto(b.cliente_id, 60));
+  if (!cliente || cliente.rol !== 'cliente') return res.status(400).json({ ok: false, error: 'Elige el cliente (o regístralo primero).' });
+  const datosCliente = { nombre: cliente.nombre, dni: cliente.dni || '', celular: cliente.celular || '', correo: cliente.email || '' };
+  const reserva = await reservasSrv.crear({
+    usuario: cliente, carrito: b.carrito, datosCliente, promoCodigo: texto(b.promo, 30),
+    opciones: { permitirFaltantes: b.permitir_faltantes === true, creadoPor: req.usuario.email }
+  });
+  // Adelanto o pago que el cliente ya hizo (efectivo, Yape revisado, transferencia).
+  const monto = numero(b.pago_monto, 0);
+  if (monto > 0) await reservasSrv.registrarPago(reserva, { metodo: 'yape', monto, referencia: texto(b.pago_referencia, 40) || `PANEL-${Date.now()}`, estado: 'aprobado', detalle: { registrado_por: req.usuario.email, nota: 'registrado al crear la reserva en el panel' } });
+  res.json({ ok: true, codigo: reserva.codigo, url: `/admin/reservas/${reserva.codigo}` });
+}));
+
 router.get('/reservas/:codigo', soloAdmin, a(async (req, res, next) => {
   const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
   if (!r) return next();
@@ -461,6 +499,50 @@ router.post('/reservas/:codigo/estado', soloAdmin, a(async (req, res, next) => {
   await db.actualizar('reservas', r.id, cambios);
   req.flash('exito', `Reserva ${r.codigo}: ${ESTADOS_RESERVA[req.body.estado]}.`);
   res.redirect(req.body.volver ? volverSeguro(req.body.volver) : `/admin/reservas/${r.codigo}`);
+}));
+
+// Editar los datos del evento. Si cambia la fecha, se revisa que los mismos
+// equipos estén libres ese día (sin contar esta misma reserva). El precio NO
+// cambia solo (quedó congelado): si hace falta, se usa "Ajustar el precio".
+router.post('/reservas/:codigo/editar', soloAdmin, a(async (req, res, next) => {
+  const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
+  if (!r) return next();
+  const volver = `/admin/reservas/${r.codigo}`;
+  if (['completada', 'cancelada', 'expirada'].includes(r.estado)) { req.flash('error', 'Esta reserva ya no se puede editar.'); return res.redirect(volver); }
+  const b = req.body;
+  const cambios = {
+    fecha_evento: /^\d{4}-\d{2}-\d{2}$/.test(b.fecha_evento) ? b.fecha_evento : r.fecha_evento,
+    hora_inicio: /^\d{2}:\d{2}$/.test(b.hora_inicio) ? b.hora_inicio : r.hora_inicio,
+    horas: Math.min(24, Math.max(1, entero(b.horas, r.horas))),
+    personas: Math.max(0, entero(b.personas, r.personas || 0)),
+    tipo_evento: TIPOS_EVENTO[b.tipo_evento] ? b.tipo_evento : r.tipo_evento,
+    lugar: texto(b.lugar, 200) || r.lugar,
+    encuesta: { ...(r.encuesta || {}), acceso_vehicular: b.acceso_vehicular === 'si' ? true : b.acceso_vehicular === 'no' ? false : r.encuesta?.acceso_vehicular ?? null }
+  };
+  if (cambios.fecha_evento !== r.fecha_evento) {
+    if (cambios.fecha_evento < hoyLima()) { req.flash('error', 'La nueva fecha ya pasó.'); return res.redirect(volver); }
+    const equipos = await catalogo.equipos({ soloPublicados: false });
+    const libres = await catalogo.disponibilidad(cambios.fecha_evento, { excluirReservaId: r.id });
+    const faltan = catalogo.faltantes((r.items || []).map(({ equipo_id, cantidad }) => ({ equipo_id, cantidad })), libres, catalogo.mapaPorId(equipos));
+    if (faltan.length && b.permitir_faltantes !== 'on') {
+      req.flash('error', `El ${cambios.fecha_evento} no alcanzan: ${faltan.map(f => `${f.nombre} (hay ${f.libre} de ${f.pedido})`).join(', ')}. Marca "reservar igual con proveedor aliado" si lo vas a cubrir.`);
+      return res.redirect(volver);
+    }
+  }
+  await db.actualizar('reservas', r.id, cambios);
+  req.flash('exito', `Reserva ${r.codigo} actualizada.${cambios.horas !== r.horas ? ' Si cambian las horas, revisa el precio.' : ''}`);
+  res.redirect(volver);
+}));
+
+// Eliminar una reserva (con sus pagos). Pide la contraseña (ruta delicada).
+// Para el historial conviene más cambiarla a "Cancelada"; esto es para errores o pruebas.
+router.post('/reservas/:codigo/eliminar', soloAdmin, a(async (req, res, next) => {
+  const r = await db.buscarUno('reservas', { codigo: req.params.codigo });
+  if (!r) return next();
+  for (const p of await db.listar('pagos', { filtro: { reserva_id: r.id } })) await db.eliminar('pagos', p.id);
+  await db.eliminar('reservas', r.id);
+  req.flash('exito', `Reserva ${r.codigo} eliminada.`);
+  res.redirect('/admin/reservas');
 }));
 
 // Agendar la reunión o llamada de confirmación (la pone el admin o el dueño).
@@ -591,6 +673,69 @@ router.post('/resenas/:id/eliminar', staff, a(async (req, res) => {
 }));
 
 // ── Clientes (admin) ────────────────────────────────────────────────────────
+// El admin registra clientes que llegan por WhatsApp o en persona: con su
+// Gmail y celular, el cliente después puede entrar solo a la web (ve sus
+// reservas y puntos). El correo puede no ser Gmail, pero entonces el cliente
+// no podrá ingresar por sí mismo (el ingreso pide Gmail).
+const celularValido = c => /^9\d{8}$/.test(c);
+const limpiarCel = v => String(v || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
+function leerCliente(b) {
+  return {
+    nombre: texto(b.nombre, 80),
+    email: texto(b.email, 120).toLowerCase() || null,
+    celular: limpiarCel(b.celular),
+    dni: String(b.dni || '').replace(/\D/g, '').slice(0, 12) || null
+  };
+}
+async function erroresCliente(d, idActual) {
+  const e = {};
+  if (d.nombre.length < 2) e.nombre = 'Escribe el nombre.';
+  if (!celularValido(d.celular)) e.celular = 'Celular de 9 dígitos (empieza en 9).';
+  else { const otro = await db.buscarUno('usuarios', { celular: d.celular }); if (otro && otro.id !== idActual) e.celular = `Ese celular ya es de ${otro.nombre}.`; }
+  if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email)) e.email = 'Correo inválido.';
+  else if (d.email) { const otro = await db.buscarUno('usuarios', { email: d.email }); if (otro && otro.id !== idActual) e.email = `Ese correo ya es de ${otro.nombre}.`; }
+  if (d.dni && !/^\d{8,12}$/.test(d.dni)) e.dni = 'DNI de 8 dígitos (o CE).';
+  return e;
+}
+
+router.post('/clientes', soloAdmin, a(async (req, res) => {
+  const d = leerCliente(req.body);
+  const e = await erroresCliente(d, null);
+  if (Object.keys(e).length) { req.flash('error', Object.values(e).join(' ')); return res.redirect('/admin/clientes?nuevo=1'); }
+  const u = await db.insertar('usuarios', { rol: 'cliente', ...d });
+  req.flash('exito', `Cliente ${u.nombre} registrado.${d.email && !/@(gmail|googlemail)\.com$/.test(d.email) ? ' Ojo: sin Gmail no podrá entrar solo a la web.' : ''}`);
+  res.redirect(req.body.y_reservar ? `/admin/reservas/nueva?cliente=${u.id}` : `/admin/clientes/${u.id}`);
+}));
+
+router.get('/clientes/:id', soloAdmin, a(async (req, res, next) => {
+  const u = await db.obtener('usuarios', req.params.id);
+  if (!u || u.rol !== 'cliente') return next();
+  const [suyas, r] = await Promise.all([db.listar('reservas', { filtro: { usuario_id: u.id }, orden: 'fecha_evento', desc: true }), precios.reglas()]);
+  res.render('admin/cliente', { titulo: u.nombre, c: u, reservas: suyas, saldo: puntosSrv.calcularSaldo(suyas, r), frecuente: await precios.esFrecuente(u.id, r) });
+}));
+
+router.post('/clientes/:id', soloAdmin, a(async (req, res, next) => {
+  const u = await db.obtener('usuarios', req.params.id);
+  if (!u || u.rol !== 'cliente') return next();
+  const d = leerCliente(req.body);
+  const e = await erroresCliente(d, u.id);
+  if (Object.keys(e).length) { req.flash('error', Object.values(e).join(' ')); return res.redirect(`/admin/clientes/${u.id}`); }
+  await db.actualizar('usuarios', u.id, d);
+  req.flash('exito', 'Datos del cliente guardados.');
+  res.redirect(`/admin/clientes/${u.id}`);
+}));
+
+// Solo se elimina un cliente SIN reservas (las reservas son el historial del negocio).
+router.post('/clientes/:id/eliminar', soloAdmin, a(async (req, res, next) => {
+  const u = await db.obtener('usuarios', req.params.id);
+  if (!u || u.rol !== 'cliente') return next();
+  const suyas = await db.listar('reservas', { filtro: { usuario_id: u.id } });
+  if (suyas.length) { req.flash('error', `${u.nombre} tiene ${suyas.length} reserva(s): no se puede eliminar. Puedes editar sus datos.`); return res.redirect(`/admin/clientes/${u.id}`); }
+  await db.eliminar('usuarios', u.id);
+  req.flash('exito', `Cliente ${u.nombre} eliminado.`);
+  res.redirect('/admin/clientes');
+}));
+
 router.get('/clientes', soloAdmin, a(async (req, res) => {
   const [usuarios, reservas] = await Promise.all([db.listar('usuarios', { filtro: { rol: 'cliente' }, orden: 'creado_en', desc: true }), db.listar('reservas')]);
   const pagadas = r => ['adelanto_pagado', 'confirmada', 'completada'].includes(r.estado);
@@ -599,7 +744,9 @@ router.get('/clientes', soloAdmin, a(async (req, res) => {
     return { ...u, reservas: suyas.length, pagadas: suyas.filter(pagadas).length, gastado: suyas.filter(pagadas).reduce((s, r) => s + Number(r.total), 0), ultima: suyas.map(r => r.fecha_evento).sort().pop() };
   });
   const reglas = (await db.ajuste('reglas')) || {};
-  res.render('admin/clientes', { titulo: 'Clientes', clientes: lista, minimo: reglas.reservas_para_frecuente || 2 });
+  const q = texto(req.query.q, 60).toLowerCase();
+  const filtrados = q ? lista.filter(c => `${c.nombre} ${c.email || ''} ${c.celular || ''} ${c.dni || ''}`.toLowerCase().includes(q)) : lista;
+  res.render('admin/clientes', { titulo: 'Clientes', clientes: filtrados, total: lista.length, q, nuevo: Boolean(req.query.nuevo), minimo: reglas.reservas_para_frecuente || 2 });
 }));
 
 // ── Mensajes y solicitudes (admin) ──────────────────────────────────────────

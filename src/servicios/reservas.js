@@ -93,7 +93,10 @@ async function preparar(carritoCrudo, { usuarioId, promoCodigo, excluirReservaId
   return { carrito, combo, adicionales, mapa, expandidos, faltan, ruta, envio, cotizacion };
 }
 
-async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo }) {
+// opciones (solo desde el panel del admin):
+//   permitirFaltantes: reservar aunque falte un equipo (lo pone un proveedor aliado)
+//   creadoPor: correo del admin que la registró (queda en la reserva)
+async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo, opciones = {} }) {
   const p = await preparar(carritoCrudo, { usuarioId: usuario.id, promoCodigo });
   const { carrito, cotizacion } = p;
 
@@ -101,7 +104,7 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
   if (carrito.fecha < hoyLima()) throw errorUsuario('La fecha del evento ya pasó.');
   if (!carrito.lugar) throw errorUsuario('Marca en el mapa el lugar del evento para calcular el transporte.');
   if (carrito.acceso_vehicular === null) throw errorUsuario('Cuéntanos si el vehículo puede llegar hasta el mismo lugar del evento.');
-  if (p.faltan.length) throw errorUsuario('Algunos equipos ya no están disponibles para esa fecha.', 409, { faltan: p.faltan });
+  if (p.faltan.length && !opciones.permitirFaltantes) throw errorUsuario('Algunos equipos ya no están disponibles para esa fecha.', 409, { faltan: p.faltan });
   if (cotizacion.error_promo) throw errorUsuario(cotizacion.error_promo);
 
   const r = await precios.reglas();
@@ -139,13 +142,14 @@ async function crear({ usuario, carrito: carritoCrudo, datosCliente, promoCodigo
     encuesta: { ...carrito.encuesta, puntos_canjeados: cotizacion.puntos?.canje.puntos || 0, puntos_descuento: cotizacion.puntos?.canje.descuento || 0, descuento_pct: cotizacion.descuento_pct, acceso_vehicular: carrito.acceso_vehicular, horas_extra: cotizacion.horas_extra, transporte_detalle: p.envio ? { gratis: p.envio.gratis, tarifa: p.envio.tarifa, motivos: p.envio.motivos_cobro, recargo_sin_acceso: p.envio.recargo_sin_acceso, altura_m: p.envio.altura_m } : null, lineas: cotizacion.lineas, ruta: p.ruta ? { km: p.ruta.km, minutos: p.ruta.minutos, fuente: p.ruta.fuente, enlace_conductor: p.ruta.enlace_conductor } : null, carga: p.envio?.carga || null },
     explicacion: carrito.explicacion || null,
     reunion: null,
-    notas_admin: ''
+    // Si la registró el admin, queda anotado quién y qué pone el proveedor aliado.
+    notas_admin: opciones.creadoPor ? `Reserva registrada desde el panel por ${opciones.creadoPor}.${p.faltan.length ? ` Faltan (proveedor aliado): ${p.faltan.map(x => `${x.pedido - x.libre}× ${x.nombre}`).join(', ')}.` : ''}` : ''
   });
 
   // Control optimista contra doble reserva.
   const libres = await catalogo.disponibilidad(carrito.fecha, { excluirReservaId: reserva.id });
   const choque = catalogo.faltantes(p.expandidos, libres, p.mapa);
-  if (choque.length) {
+  if (choque.length && !opciones.permitirFaltantes) {
     await db.eliminar('reservas', reserva.id);
     throw errorUsuario('Otra persona acaba de reservar parte de esos equipos para esa fecha.', 409, { faltan: choque });
   }

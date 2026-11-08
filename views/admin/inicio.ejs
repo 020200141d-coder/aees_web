@@ -99,7 +99,7 @@
       <% ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].forEach(d => { %><span class="dia-semana"><%= d %></span><% }) %>
       <% for (let i = 0; i < desfase; i++) { %><div class="dia fuera"></div><% } %>
       <% for (let dia = 1; dia <= diasMes; dia++) { const f = `${mes}-${String(dia).padStart(2, '0')}`; const evs = delMes.filter(r => r.fecha_evento === f); %>
-        <div class="dia<%= f === hoy ? ' hoy' : '' %>"><span><%= dia %></span>
+        <div class="dia<%= f === hoy ? ' hoy' : '' %>"><span><%= dia %><% if (f >= hoy) { %><a class="dia-nueva" href="/admin/reservas/nueva?fecha=<%= f %>" title="Nueva reserva el <%= f %>" aria-label="Nueva reserva el <%= f %>">+</a><% } %></span>
           <% evs.forEach(r => { %><a class="evento<%= ['adelanto_pagado', 'confirmada', 'completada'].includes(r.estado) ? ' ok' : '' %>" href="/admin/reservas/<%= r.codigo %>" title="<%= r.codigo %> · <%= ESTADOS_RESERVA[r.estado] %>"><%= (r.datos_cliente?.nombre || r.codigo).split(' ')[0] %></a><% }) %>
         </div>
       <% } %>

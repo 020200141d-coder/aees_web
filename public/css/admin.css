@@ -122,3 +122,10 @@ body.admin { background: #0a1522; font-size: 0.94rem; }
 /* Miniatura del comprobante de Yape/Plin (se abre en grande al tocarla). */
 .comprobante-mini { display: inline-block; margin: .4rem 0; }
 .comprobante-mini img { width: 120px; max-height: 200px; object-fit: cover; object-position: top; border-radius: 10px; border: 1px solid var(--borde); }
+
+/* Calendario: "+" para crear una reserva ese día. */
+.calendario .dia > span { display: flex; justify-content: space-between; align-items: center; }
+.dia-nueva { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; color: var(--primario); font-weight: 700; opacity: 0; transition: opacity .15s, background .15s; }
+.calendario .dia:hover .dia-nueva, .dia-nueva:focus-visible { opacity: 1; }
+.dia-nueva:hover { background: rgba(var(--primario-rgb), .15); }
+@media (hover: none) { .dia-nueva { opacity: .7; } }

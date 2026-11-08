@@ -1,0 +1,45 @@
+<%#
+  admin/cliente.ejs — ficha de un cliente: editar sus datos, ver puntos y reservas,
+  crear una reserva para él y eliminarlo (solo si no tiene reservas).
+%>
+<% const { soles, fechaLarga, ESTADOS_RESERVA } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1><%= c.nombre %></h1><p><%= frecuente ? 'Cliente frecuente · ' : '' %><%= saldo.disponible %> puntos disponibles<%= saldo.por_ganar ? ` · +${saldo.por_ganar} por ganar` : '' %></p></div>
+  <div class="acciones">
+    <a href="/admin/reservas/nueva?cliente=<%= c.id %>" class="btn btn-primario btn-sm"><i class="fa-solid fa-calendar-plus"></i> Nueva reserva</a>
+    <% if (c.celular) { %><a class="btn btn-wa btn-sm" target="_blank" rel="noopener" href="https://wa.me/51<%= c.celular %>"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a><% } %>
+    <a href="/admin/clientes" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+  </div>
+</header>
+<div class="rejilla rejilla-2">
+  <form method="post" action="/admin/clientes/<%= c.id %>" class="tarjeta" novalidate>
+    <h2><i class="fa-solid fa-id-card"></i> Datos</h2>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="form-rejilla">
+      <label class="campo-simple ancho">Nombre y apellido<input name="nombre" value="<%= c.nombre %>" maxlength="80" required></label>
+      <label class="campo-simple">Celular<input name="celular" value="<%= c.celular || '' %>" inputmode="tel" maxlength="12" required></label>
+      <label class="campo-simple">Gmail<input name="email" type="email" value="<%= c.email || '' %>" maxlength="120"></label>
+      <label class="campo-simple">DNI<input name="dni" value="<%= c.dni || '' %>" inputmode="numeric" maxlength="12"></label>
+    </div>
+    <div class="form-pie"><button class="btn btn-primario btn-sm">Guardar datos</button></div>
+  </form>
+
+  <section class="tarjeta">
+    <h2><i class="fa-solid fa-calendar-check"></i> Reservas (<%= reservas.length %>)</h2>
+    <% if (!reservas.length) { %>
+      <p class="suave">Aún no tiene reservas.</p>
+      <form method="post" action="/admin/clientes/<%= c.id %>/eliminar" data-confirmar="¿Eliminar a <%= c.nombre %>? No tiene reservas." style="margin-top:1rem"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn btn-ghost btn-sm"><i class="fa-regular fa-trash-can"></i> Eliminar cliente</button></form>
+    <% } else { %>
+      <div class="lista-agenda">
+        <% reservas.forEach(r => { %>
+          <a class="mensaje" href="/admin/reservas/<%= r.codigo %>">
+            <b><%= r.codigo %> · <%= fechaLarga(r.fecha_evento) %></b>
+            <small class="suave"><%= soles(r.total) %> · pagado <%= soles(r.pagado) %> · <span class="estado-reserva estado-<%= r.estado %>" style="font-size:.7rem"><%= ESTADOS_RESERVA[r.estado] %></span></small>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+</div>
+<%- include('_fin') %>

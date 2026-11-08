@@ -1,7 +1,7 @@
 <%# admin/reservas.ejs — todas las reservas con filtro por estado y búsqueda. %>
 <% const { soles, fechaLarga, ESTADOS_RESERVA } = util; %>
 <%- include('_inicio') %>
-<header class="admin-cabecera"><div><h1>Reservas</h1><p><%= reservas.length %> resultado(s)</p></div></header>
+<header class="admin-cabecera"><div><h1>Reservas</h1><p><%= reservas.length %> resultado(s)</p></div><a href="/admin/reservas/nueva" class="btn btn-primario btn-sm"><i class="fa-solid fa-calendar-plus"></i> Nueva reserva</a></header>
 <form class="barra-filtros" method="get">
   <input type="search" name="q" value="<%= q %>" placeholder="Código, cliente, celular o lugar" aria-label="Buscar">
   <select name="estado" onchange="this.form.submit()" aria-label="Estado">

@@ -1,0 +1,93 @@
+<%#
+  admin/reserva-nueva.ejs — el admin registra una reserva (cliente que llamó o escribió por WhatsApp).
+  Se llega desde el calendario (?fecha=) o desde la ficha del cliente (?cliente=).
+  public/js/admin-reserva.js arma el "carrito", busca el lugar (Nominatim), muestra el precio en
+  vivo (POST /admin/reservas/cotizar, con los descuentos de ESE cliente) y guarda
+  (POST /admin/reservas/nueva). El precio sale de las mismas reglas que la web.
+%>
+<% const { TIPOS_EVENTO } = util; %>
+<%- include('_inicio') %>
+<header class="admin-cabecera">
+  <div><h1>Nueva reserva</h1><p>Para un cliente que te escribió o llamó. Mismos precios, stock y transporte que la web.</p></div>
+  <a href="/admin/reservas" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+</header>
+<form id="form-reserva-admin" class="rejilla rejilla-2" novalidate>
+  <div style="display:grid;gap:1.2rem">
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-user"></i> Cliente</h2>
+      <div class="form-rejilla">
+        <label class="campo-simple ancho">Cliente
+          <select name="cliente_id" required>
+            <option value="">Elige un cliente…</option>
+            <% clientes.forEach(c => { %><option value="<%= c.id %>" <%= c.id === clienteId ? 'selected' : '' %>><%= c.nombre %> · <%= c.celular || c.email || '' %></option><% }) %>
+          </select>
+          <small class="ayuda">¿Es nuevo? <a href="/admin/clientes?nuevo=1" style="color:var(--primario)">Regístralo con su Gmail y celular</a> y vuelve aquí.</small>
+        </label>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-champagne-glasses"></i> Evento</h2>
+      <div class="form-rejilla">
+        <label class="campo-simple">Fecha<input type="date" name="fecha" min="<%= hoy %>" value="<%= fecha %>" required></label>
+        <label class="campo-simple">Hora de inicio<input type="time" name="hora_inicio" value="19:00"></label>
+        <label class="campo-simple">Horas<input type="number" name="horas" min="1" max="24" value="<%= reglas.horas_jornada %>"></label>
+        <label class="campo-simple">Invitados<input type="number" name="personas" min="1" value="60"></label>
+        <label class="campo-simple">Tipo
+          <select name="tipo_evento"><% Object.entries(TIPOS_EVENTO).forEach(([id, t]) => { %><option value="<%= id %>"><%= t.label %></option><% }) %></select>
+        </label>
+        <label class="campo-simple">Espacio
+          <select name="espacio"><option value="interior">Cerrado</option><option value="exterior">Al aire libre</option></select>
+        </label>
+        <label class="campo-simple ancho">Lugar
+          <span class="fila-form" style="margin:0"><input name="lugar_texto" placeholder="Ej.: Plaza de Armas, Cusco" autocomplete="off"><button type="button" class="btn btn-ghost btn-sm" id="buscar-lugar-admin"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button></span>
+          <small class="ayuda" id="lugar-elegido">Busca el lugar para calcular la ruta y el transporte desde el almacén.</small>
+        </label>
+        <label class="campo-simple">¿El vehículo llega hasta el lugar?
+          <select name="acceso_vehicular"><option value="si">Sí</option><option value="no">No (cargar a mano)</option></select>
+        </label>
+        <label class="casilla"><input type="checkbox" name="con_tecnico"> Técnico operando todo el evento</label>
+      </div>
+    </section>
+
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-boxes-stacked"></i> Equipos</h2>
+      <div class="form-rejilla">
+        <label class="campo-simple ancho">Paquete / combo
+          <select name="combo_id">
+            <option value="">Sin paquete (solo equipos sueltos)</option>
+            <% combos.forEach(c => { %><option value="<%= c.id %>"><%= c.nombre %> · S/ <%= c.precio %> (<%= c.horas_base %> h)</option><% }) %>
+          </select>
+        </label>
+        <div class="ancho" id="adicionales-admin"></div>
+      </div>
+      <h3 style="font-size:.95rem;margin:1rem 0 .5rem">Equipos sueltos</h3>
+      <div id="filas-sueltos" style="display:grid;gap:.5rem"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="agregar-suelto" style="margin-top:.6rem"><i class="fa-solid fa-plus"></i> Agregar equipo</button>
+    </section>
+  </div>
+
+  <aside style="display:grid;gap:1.2rem;align-content:start">
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-receipt"></i> Precio</h2>
+      <div id="faltan-admin"></div>
+      <div class="resumen-precio" id="resumen-admin"><p class="suave">Elige el cliente, la fecha y los equipos.</p></div>
+      <label class="campo-simple" style="margin-top:.8rem">Código de promoción<input name="promo" maxlength="20" style="text-transform:uppercase"></label>
+    </section>
+    <section class="tarjeta">
+      <h2><i class="fa-solid fa-money-bill-wave"></i> Pago recibido (opcional)</h2>
+      <div class="form-rejilla">
+        <label class="campo-simple">Monto (S/)<input type="number" name="pago_monto" step="0.01" min="0" placeholder="0.00"></label>
+        <label class="campo-simple">Referencia<input name="pago_referencia" maxlength="40" placeholder="Yape 12345678 / efectivo"></label>
+      </div>
+      <small class="ayuda">Si cubre el adelanto, la reserva queda como "Adelanto pagado".</small>
+    </section>
+    <label class="casilla"><input type="checkbox" name="permitir_faltantes"> Reservar aunque falte algún equipo (lo pone un proveedor aliado)</label>
+    <span class="campo-error" id="error-reserva-admin"></span>
+    <button class="btn btn-primario btn-bloque"><i class="fa-solid fa-calendar-check"></i> Crear reserva</button>
+  </aside>
+</form>
+<%# Datos para el formulario (equipos y adicionales de cada combo). %>
+<script type="application/json" id="datos-reserva-admin"><%- JSON.stringify({ equipos: equipos.map(e => ({ id: e.id, nombre: e.nombre, precio: e.precio })), combos: Object.fromEntries(combos.map(c => [c.id, { horas: c.horas_base, adicionales: c.adicionales || [] }])) }).replace(/</g, '\\u003c') %></script>
+<script src="/js/admin-reserva.js" defer></script>
+<%- include('_fin') %>
