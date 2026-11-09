@@ -94,6 +94,11 @@ app.post('/tareas/diaria', async (req, res) => {
 });
 
 // ── 2. Estáticos ─────────────────────────────────────────────────────────────
+// Los CSS/JS se guardan 7 días en el navegador. Para que un deploy nuevo se vea al instante,
+// las vistas los piden con ?v=<versión> (app.locals.v): al cambiar la versión cambia la URL
+// y el navegador descarga el archivo nuevo. En Render la versión es el commit desplegado
+// (RENDER_GIT_COMMIT); en local, la hora de arranque.
+app.locals.v = String(process.env.RENDER_GIT_COMMIT || Date.now().toString(36)).slice(0, 8);
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: ES_PROD ? '7d' : 0 }));
 
 // ── 3. Cuerpo de la petición ─────────────────────────────────────────────────

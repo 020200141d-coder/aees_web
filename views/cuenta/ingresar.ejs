@@ -58,7 +58,7 @@
 
 <% if (googleClientId) { %>
 <%# El callback aeesGoogle está en public/js/google.js (lo comparte la invitación de la portada). %>
-<script src="/js/google.js"></script>
+<script src="/js/google.js?v=<%= v %>"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <% } %>
 <%- include('../partials/footer') %>

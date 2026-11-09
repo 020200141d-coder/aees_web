@@ -89,5 +89,5 @@
 </form>
 <%# Datos para el formulario (equipos y adicionales de cada combo). %>
 <script type="application/json" id="datos-reserva-admin"><%- JSON.stringify({ equipos: equipos.map(e => ({ id: e.id, nombre: e.nombre, precio: e.precio })), combos: Object.fromEntries(combos.map(c => [c.id, { horas: c.horas_base, adicionales: c.adicionales || [] }])) }).replace(/</g, '\\u003c') %></script>
-<script src="/js/admin-reserva.js" defer></script>
+<script src="/js/admin-reserva.js?v=<%= v %>" defer></script>
 <%- include('_fin') %>
