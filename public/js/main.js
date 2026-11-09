@@ -14,6 +14,7 @@
 //   • initTema           botón modo día / noche (se recuerda en el dispositivo)
 //   • initAvisoCuenta    invitación "Crea tu cuenta con Google" en la portada
 //   • initBurbujaWa      burbuja "¿Cotizamos tu evento?" junto al WhatsApp
+//   • initCamposFaciles  fecha/hora fáciles de abrir, números con − / + y deslizador visible
 //
 //  Flujo al cargar: DOMContentLoaded → se enganchan los init*() y se añade
 //  body.cargado, que dispara la entrada animada del hero en el CSS.
@@ -847,6 +848,51 @@ function initBurbujaWa() {
   $('a', burbuja).addEventListener('click', cerrar);
 }
 
+/* ------------------------------------------------------------------ */
+/* Campos fáciles: fecha/hora se abren tocando en cualquier parte,    */
+/* los números llevan botones − / + grandes y el deslizador muestra   */
+/* la parte llena en dorado (variable CSS --lleno).                   */
+/* ------------------------------------------------------------------ */
+function initCamposFaciles() {
+  // Fecha y hora: abrir el selector al tocar el campo (no solo el iconito).
+  $$('input[type="date"], input[type="time"]').forEach(input => {
+    input.addEventListener('click', () => { try { input.showPicker(); } catch (e) { /* navegador antiguo: usa su ícono */ } });
+  });
+
+  // Números: envolver con − y +. Se respetan min, max y step, y se avisa con eventos
+  // "input" y "change" para que los scripts de cada página recalculen como siempre.
+  $$('input[type="number"]').forEach(input => {
+    if (input.closest('.numero-facil') || input.closest('.admin')) return;
+    const caja = document.createElement('div');
+    caja.className = 'numero-facil';
+    const boton = (texto, signo) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = texto;
+      b.setAttribute('aria-label', signo > 0 ? 'Aumentar' : 'Disminuir');
+      b.addEventListener('click', () => {
+        const paso = Number(input.step) || 1;
+        const min = input.min === '' ? -Infinity : Number(input.min);
+        const max = input.max === '' ? Infinity : Number(input.max);
+        const actual = input.value === '' ? (signo > 0 ? (Number.isFinite(min) ? min - paso : 0) : 0) : Number(input.value);
+        input.value = Math.min(max, Math.max(min, actual + signo * paso));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      return b;
+    };
+    input.replaceWith(caja);
+    caja.append(boton('−', -1), input, boton('+', 1));
+  });
+
+  // Deslizador: pintar la parte recorrida.
+  $$('input[type="range"]').forEach(r => {
+    const pintar = () => r.style.setProperty('--lleno', ((r.value - r.min) / (r.max - r.min) * 100) + '%');
+    r.addEventListener('input', pintar);
+    pintar();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Pequeña pausa para que se note la entrada animada del hero.
   setTimeout(marcarCargado, 120);
@@ -876,4 +922,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initTema();
   initAvisoCuenta();
   initBurbujaWa();
+  initCamposFaciles();
 });

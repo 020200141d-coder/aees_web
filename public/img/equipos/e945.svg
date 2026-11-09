@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <radialGradient id="luz-e945" cx="50%" cy="8%" r="85%"><stop offset="0" stop-color="#2d5680"/><stop offset=".55" stop-color="#1a3350"/><stop offset="1" stop-color="#0b1726"/></radialGradient>
+    <radialGradient id="piso-e945" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#luz-e945)"/>
+  <ellipse cx="400" cy="540" rx="300" ry="34" fill="url(#piso-e945)"/>
+  <defs>
+    <linearGradient id="cuerpo-e945" x1="0" x2="1"><stop offset="0" stop-color="#25292e"/><stop offset=".45" stop-color="#5d666f"/><stop offset="1" stop-color="#25292e"/></linearGradient>
+    <radialGradient id="bola-e945" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#aab4bd"/><stop offset="1" stop-color="#4a5560"/></radialGradient>
+    <pattern id="malla-e945" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="none"/><path d="M0 0h9M0 0v9" stroke="#2b333b" stroke-width="1.6" opacity=".55"/></pattern>
+    <clipPath id="recorte-e945"><circle cx="0" cy="-150" r="78"/></clipPath>
+  </defs>
+  <g transform="translate(405 300) rotate(-36) scale(.98)">
+    <!-- cable -->
+    <path d="M0 250 C 0 330, 120 330, 160 380" fill="none" stroke="#111a22" stroke-width="16" stroke-linecap="round"/>
+    <!-- conector XLR -->
+    <rect x="-24" y="200" width="48" height="56" rx="8" fill="#1d252d"/>
+    <rect x="-24" y="210" width="48" height="6" fill="#3a4550"/>
+    <!-- cuerpo cónico -->
+    <path d="M-50 -78 L50 -78 L30 205 L-30 205 Z" fill="url(#cuerpo-e945)"/>
+    <path d="M-50 -78 L50 -78 L46 -40 L-46 -40 Z" fill="#000" opacity=".18"/>
+    
+    <!-- anillo -->
+    <rect x="-60" y="-92" width="120" height="22" rx="6" fill="#c43a2f"/>
+    <rect x="-60" y="-92" width="120" height="6" rx="3" fill="#fff" opacity=".25"/>
+    <!-- rejilla en bola -->
+    <circle cx="0" cy="-150" r="78" fill="url(#bola-e945)"/>
+    <g clip-path="url(#recorte-e945)"><rect x="-80" y="-230" width="160" height="160" fill="url(#malla-e945)"/></g>
+    <path d="M-78 -150 a78 78 0 0 0 156 0" fill="#000" opacity=".12"/>
+    <ellipse cx="-26" cy="-188" rx="22" ry="12" fill="#fff" opacity=".45" transform="rotate(-30 -26 -188)"/>
+  </g></svg>

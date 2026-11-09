@@ -1,32 +1,38 @@
 <%#
-  aviso-cuenta.ejs — invitación a crear la cuenta, en la portada, solo para quien NO ha ingresado.
+  aviso-cuenta.ejs — invitación compacta a crear la cuenta, en la portada, solo para quien NO ha ingresado.
   Por qué: el cliente nuevo no suele buscar el ícono de "Ingresar"; esta tarjeta se lo ofrece
-  en la primera pantalla con el beneficio concreto (puntos → descuento) y el botón de Google,
-  que es lo más rápido (un toque; luego solo se pide el celular en /cuenta/completar).
+  con el beneficio concreto (puntos → descuento) y el botón de Google (lo más rápido:
+  un toque y luego solo se pide el celular en /cuenta/completar).
 
   Flujo:
-   1. La tarjeta entra deslizándose a los 2,5 s (main.js → initAvisoCuenta).
-   2. "Continuar con Google" → Google llama a aeesGoogle() (public/js/google.js), que envía el
-      token a POST /cuenta/google y redirige: si es nuevo, a completar el celular.
-      Sin GOOGLE_CLIENT_ID configurado se muestra un botón normal a /cuenta/ingresar.
-   3. "Ahora no" la oculta 7 días en este dispositivo (localStorage 'aees_aviso_cuenta').
+   1. Entra deslizándose a los 2,5 s (main.js → initAvisoCuenta).
+   2. "Continuar con Google": lo que se VE es nuestro botón (.google-boton-cara), y encima,
+      casi invisible, está el botón oficial de Google (.google-boton-real), que es el que
+      recibe el toque y abre la ventana de Google. Así se ve acorde al sitio y funciona igual.
+      Google llama a aeesGoogle() (public/js/google.js) → POST /cuenta/google.
+      Sin GOOGLE_CLIENT_ID se muestra un botón normal a /cuenta/ingresar.
+   3. La flecha (⌄) la minimiza al instante; queda el botón flotante con la "G" (footer.ejs)
+      y no vuelve a abrirse en 7 días en este dispositivo (localStorage 'aees_aviso_cuenta').
 %>
 <% if (!usuario) { %>
 <aside class="aviso-cuenta" id="aviso-cuenta" aria-labelledby="aviso-cuenta-titulo">
-  <button type="button" class="aviso-cuenta-cerrar" data-cerrar-aviso aria-label="Cerrar la invitación"><i class="fa-solid fa-xmark"></i></button>
-  <div class="aviso-cuenta-icono" aria-hidden="true"><i class="fa-solid fa-gift"></i></div>
-  <div class="aviso-cuenta-cuerpo">
-    <span class="aviso-cuenta-etiqueta">Cliente nuevo</span>
-    <h2 id="aviso-cuenta-titulo">Crea tu cuenta <span class="texto-acento">en un toque</span></h2>
-    <p>Guardamos tus datos para la próxima reserva y <b>sumas puntos</b>: cada <%= reglas?.puntos_canje || 5 %> puntos te descontamos <b>S/ <%= reglas?.soles_canje || 50 %></b>.</p>
-    <% if (googleClientId) { %>
-      <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup" data-volver="<%= rutaActual %>"></div>
-      <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="outline" data-size="large" data-text="continue_with" data-locale="es" data-width="260"></div>
-    <% } else { %>
-      <a class="btn btn-primario" href="/cuenta/ingresar?volver=<%= encodeURIComponent(rutaActual) %>"><i class="fa-solid fa-user-plus"></i> Crear mi cuenta gratis</a>
-    <% } %>
-    <button type="button" class="aviso-cuenta-luego" data-cerrar-aviso>Ahora no</button>
+  <div class="aviso-cuenta-cabeza">
+    <span class="aviso-cuenta-icono" aria-hidden="true"><i class="fa-solid fa-gift"></i></span>
+    <div>
+      <h2 id="aviso-cuenta-titulo">Crea tu cuenta gratis</h2>
+      <p>Suma puntos: <b><%= reglas?.puntos_canje || 5 %> = S/ <%= reglas?.soles_canje || 50 %></b> de descuento</p>
+    </div>
+    <button type="button" class="aviso-cuenta-min" data-cerrar-aviso aria-label="Minimizar la invitación" title="Minimizar"><i class="fa-solid fa-chevron-down"></i></button>
   </div>
+  <% if (googleClientId) { %>
+    <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup" data-volver="<%= rutaActual %>"></div>
+    <div class="google-boton">
+      <span class="google-boton-cara" aria-hidden="true"><%- include('google-g') %> Continuar con Google</span>
+      <div class="g_id_signin google-boton-real" data-type="standard" data-shape="pill" data-theme="outline" data-size="large" data-text="continue_with" data-locale="es" data-width="290"></div>
+    </div>
+  <% } else { %>
+    <a class="google-boton google-boton-cara" href="/cuenta/ingresar?volver=<%= encodeURIComponent(rutaActual) %>"><%- include('google-g') %> Crear mi cuenta</a>
+  <% } %>
 </aside>
 <% if (googleClientId) { %>
 <script src="/js/google.js?v=<%= v %>"></script>

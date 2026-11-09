@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <radialGradient id="luz-minibrut" cx="50%" cy="8%" r="85%"><stop offset="0" stop-color="#2d5680"/><stop offset=".55" stop-color="#1a3350"/><stop offset="1" stop-color="#0b1726"/></radialGradient>
+    <radialGradient id="piso-minibrut" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#luz-minibrut)"/>
+  <ellipse cx="400" cy="540" rx="300" ry="34" fill="url(#piso-minibrut)"/>
+  <defs>
+    <radialGradient id="lampara"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#fff2c6"/><stop offset=".7" stop-color="#ffbf47"/><stop offset="1" stop-color="#8a5a12"/></radialGradient>
+    <radialGradient id="destello"><stop offset="0" stop-color="#fff4d0" stop-opacity=".8"/><stop offset="1" stop-color="#fff4d0" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="400" cy="300" rx="360" ry="250" fill="url(#destello)"/>
+  <!-- lira -->
+  <path d="M220 300 C 170 300, 170 500, 220 500 M580 300 C 630 300, 630 500, 580 500" fill="none" stroke="#1f272f" stroke-width="12"/>
+  <rect x="210" y="140" width="380" height="330" rx="18" fill="#151c23" stroke="#2a343e" stroke-width="6"/>
+  <circle cx="305" cy="225" r="78" fill="#0b1015"/><circle cx="305" cy="225" r="66" fill="url(#lampara)"/><circle cx="305" cy="225" r="66" fill="none" stroke="#c9a15a" stroke-width="4" opacity=".6"/><circle cx="495" cy="225" r="78" fill="#0b1015"/><circle cx="495" cy="225" r="66" fill="url(#lampara)"/><circle cx="495" cy="225" r="66" fill="none" stroke="#c9a15a" stroke-width="4" opacity=".6"/><circle cx="305" cy="385" r="78" fill="#0b1015"/><circle cx="305" cy="385" r="66" fill="url(#lampara)"/><circle cx="305" cy="385" r="66" fill="none" stroke="#c9a15a" stroke-width="4" opacity=".6"/><circle cx="495" cy="385" r="78" fill="#0b1015"/><circle cx="495" cy="385" r="66" fill="url(#lampara)"/><circle cx="495" cy="385" r="66" fill="none" stroke="#c9a15a" stroke-width="4" opacity=".6"/>
+  <g stroke="#fff7dc" stroke-width="5" stroke-linecap="round" opacity=".55">
+    <path d="M400 70 V20M300 90 L270 45M500 90 L530 45M150 240 H90M650 240 H710"/>
+  </g></svg>

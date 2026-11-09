@@ -66,7 +66,7 @@ const COMBOS = [
     items: [{ equipo_id: 'xrs212', cantidad: 2 }, { equipo_id: 'srx828sp', cantidad: 1 }, { equipo_id: 'eon615', cantidad: 2 }, { equipo_id: 'ui24r', cantidad: 1 }, { equipo_id: 'kit-cables', cantidad: 2 }],
     adicionales: [
       { equipo_id: 'srx828sp', cantidad: 1, precio: 180, etiqueta: 'Segundo sub doble SRX828SP' },
-      { equipo_id: 'eon615', cantidad: 2, precio: 100, etiqueta: '2 JBL EON615 adicionales (4 monitores para grupo)' },
+      { equipo_id: 'eon615', cantidad: 2, precio: 150, etiqueta: '2 JBL EON615 adicionales (4 monitores para grupo)' },
       { equipo_id: 'beam290', cantidad: 4, precio: 320, etiqueta: '4 cabezas Beam 290' }
     ],
     desde: 'combo-line-array'

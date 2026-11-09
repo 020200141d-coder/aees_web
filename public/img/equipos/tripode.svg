@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <radialGradient id="luz-tripode" cx="50%" cy="8%" r="85%"><stop offset="0" stop-color="#2d5680"/><stop offset=".55" stop-color="#1a3350"/><stop offset="1" stop-color="#0b1726"/></radialGradient>
+    <radialGradient id="piso-tripode" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#luz-tripode)"/>
+  <ellipse cx="400" cy="540" rx="300" ry="34" fill="url(#piso-tripode)"/>
+  <defs><linearGradient id="tubo" x1="0" x2="1"><stop offset="0" stop-color="#2a3138"/><stop offset=".5" stop-color="#6b7884"/><stop offset="1" stop-color="#2a3138"/></linearGradient></defs>
+  <!-- patas -->
+  <g stroke="#2f373f" stroke-width="14" stroke-linecap="round">
+    <path d="M400 360 L250 540"/><path d="M400 360 L550 540"/><path d="M400 360 L420 560"/>
+  </g>
+  <g stroke="#56616c" stroke-width="6" stroke-linecap="round"><path d="M330 455 L400 410 L470 455"/><path d="M400 410 L410 470"/></g>
+  <!-- tubo inferior y superior -->
+  <rect x="384" y="210" width="32" height="160" rx="6" fill="url(#tubo)"/>
+  <rect x="390" y="70" width="20" height="150" rx="5" fill="url(#tubo)"/>
+  <!-- perilla de ajuste -->
+  <rect x="372" y="206" width="56" height="20" rx="6" fill="#151b21"/>
+  <circle cx="440" cy="216" r="14" fill="#151b21"/><circle cx="440" cy="216" r="6" fill="#3a444e"/>
+  <!-- base del parlante -->
+  <rect x="380" y="56" width="40" height="22" rx="4" fill="#151b21"/>
+  <!-- parlante fantasma, para entender el uso -->
+  <g opacity=".22"><rect x="300" y="-120" width="200" height="180" rx="14" fill="#c8dcf0"/></g>
+  <!-- flecha de altura -->
+  <g stroke="#f5a623" stroke-width="3" fill="#f5a623" opacity=".9">
+    <path d="M600 90 V520" fill="none" stroke-dasharray="8 8"/><path d="M592 104 L600 86 L608 104 Z"/><path d="M592 506 L600 524 L608 506 Z"/>
+  </g>
+  <text x="616" y="312" fill="#f5a623" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">1,2–2 m</text></svg>
