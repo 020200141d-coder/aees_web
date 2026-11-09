@@ -1,0 +1,30 @@
+<%#
+  cuenta/completar.ejs — segundo y último paso al registrarse con Google:
+  Google ya dio el nombre y el correo verificado; aquí solo se pide el celular
+  (WhatsApp), para coordinar el evento y avisar del pago. POST /cuenta/completar.
+%>
+<%- include('../partials/head') %>
+<body>
+<%- include('../partials/header', { solido: true }) %>
+<main class="pagina">
+  <div class="contenedor ingreso">
+    <header class="pagina-titulo" style="text-align:center">
+      <span class="seccion-num">Último paso</span>
+      <h1>¿A qué <span class="texto-acento">celular</span> te escribimos?</h1>
+      <p style="margin:0 auto">Lo usamos para coordinar tu evento por WhatsApp. Solo te lo pedimos esta vez.</p>
+    </header>
+
+    <section class="panel">
+      <% if (error) { %><div class="flash flash-error" role="alert"><%= error %></div><% } %>
+      <p class="cuenta-google"><i class="fa-brands fa-google"></i> <span>Entraste como <b><%= usuario.email %></b></span></p>
+      <form method="post" action="/cuenta/completar" style="display:grid;gap:.9rem">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+        <input type="hidden" name="volver" value="<%= volver %>">
+        <label class="campo-simple">Celular (WhatsApp)<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" value="<%= datos.celular || '' %>" autocomplete="tel" required autofocus></label>
+        <label class="campo-simple">Tu nombre<input name="nombre" maxlength="80" value="<%= datos.nombre || '' %>" autocomplete="name" required></label>
+        <button class="btn btn-primario btn-bloque magnetico"><i class="fa-solid fa-check"></i> Listo, continuar</button>
+      </form>
+    </section>
+  </div>
+</main>
+<%- include('../partials/footer') %>

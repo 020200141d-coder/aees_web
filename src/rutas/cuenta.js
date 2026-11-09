@@ -36,6 +36,8 @@ const volverSeguro = v => (typeof v === 'string' && /^\/(?!\/)/.test(v) ? v : '/
 
 const limiteLogin = limitar({ clave: 'login', max: 10, ventanaMin: 15, mensaje: 'Demasiados intentos. Espera 15 minutos.' });
 
+const limpiarCelularGoogle = v => String(v || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
+
 router.get('/ingresar', (req, res) => {
   if (req.usuario) return res.redirect(volverSeguro(req.query.volver));
   res.render('cuenta/ingresar', { titulo: 'Ingresar', volver: volverSeguro(req.query.volver), error: null, datos: {} });
@@ -54,6 +56,8 @@ router.post('/google', limiteLogin, a(async (req, res) => {
 
   const email = info.email.toLowerCase();
   let u = (await db.buscarUno('usuarios', { google_sub: info.sub })) || (await db.buscarUno('usuarios', { email }));
+  // Las cuentas del personal entran solo por /admin con contraseña, nunca con Google.
+  if (u && u.rol !== 'cliente') return res.status(403).json({ ok: false, error: 'Ese correo es del personal: ingresa por el panel.' });
   if (!u) {
     u = await db.insertar('usuarios', { rol: 'cliente', nombre: info.name || email.split('@')[0], email, google_sub: info.sub });
   } else if (!u.google_sub) {
@@ -61,7 +65,31 @@ router.post('/google', limiteLogin, a(async (req, res) => {
   }
   req.session.uid = u.id;
   req.sessionOptions.maxAge = DIAS_CLIENTE * 24 * 3600 * 1000;
-  res.json({ ok: true, volver: volverSeguro(req.body?.volver) });
+  // Cliente nuevo (o sin celular): Google ya nos dio su nombre y correo verificado;
+  // solo falta el celular (WhatsApp), que se pide en una pantalla de un solo campo.
+  const volver = volverSeguro(req.body?.volver);
+  res.json({ ok: true, volver: u.celular ? volver : `/cuenta/completar?volver=${encodeURIComponent(volver)}` });
+}));
+
+// ── Completar el registro: pedir el celular después de entrar con Google ─────
+router.get('/completar', requiereCliente, (req, res) => {
+  const volver = volverSeguro(req.query.volver);
+  if (req.usuario.celular) return res.redirect(volver);
+  res.render('cuenta/completar', { titulo: 'Tu celular', volver, error: null, datos: { nombre: req.usuario.nombre } });
+});
+
+router.post('/completar', requiereCliente, limiteLogin, a(async (req, res) => {
+  const volver = volverSeguro(req.body.volver);
+  const celular = limpiarCelularGoogle(req.body.celular);
+  const nombre = texto(req.body.nombre, 80) || req.usuario.nombre;
+  const mostrar = error => res.status(400).render('cuenta/completar', { titulo: 'Tu celular', volver, error, datos: { celular, nombre } });
+  if (!/^9\d{8}$/.test(celular)) return mostrar('Escribe tu celular de 9 dígitos (empieza en 9).');
+  if (nombre.length < 2) return mostrar('Escribe tu nombre.');
+  const otro = await db.buscarUno('usuarios', { celular });
+  if (otro && otro.id !== req.usuario.id) return mostrar('Ese celular ya está registrado en otra cuenta. Si es tuyo, escríbenos por WhatsApp y lo unimos.');
+  await db.actualizar('usuarios', req.usuario.id, { celular, nombre });
+  req.flash('exito', `¡Listo, ${nombre.split(' ')[0]}! Tu cuenta quedó lista y te recordaremos en este dispositivo.`);
+  res.redirect(volver);
 }));
 
 // Gmail (también @googlemail.com, que es lo mismo). Se guarda en minúsculas.

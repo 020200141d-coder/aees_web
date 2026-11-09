@@ -99,7 +99,7 @@
 4. Recibe **3 opciones** (Esencial, Recomendada y Premium) más un paquete sugerido, con transporte, técnico, clima y una explicación personalizada.
 
 ### Cliente habitual
-- Ingreso **sin contraseñas**: solo **Gmail y celular**; queda recordado **6 meses** en su dispositivo (también con Google si se configura).
+- Ingreso **sin contraseñas** en un clic con **Google**; si es la primera vez, solo se le pide el **celular** (WhatsApp). Alternativa: Gmail + celular. Queda recordado **6 meses** en su dispositivo.
 - **Puntos**: 1 punto por cada S/ 100 de eventos realizados; 5 puntos = S/ 50 de descuento. Se canjean en "Mi evento".
 - **Mi cuenta**: puntos con barra de avance, descuento de cliente frecuente, reservas con botón **Repetir** y **reseña** de los eventos ya realizados.
 

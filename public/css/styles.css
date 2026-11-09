@@ -841,3 +841,11 @@ details.clausulas { margin-bottom: .8rem; }
 
 /* Títulos que suenan: las letras de una palabra nunca se separan en dos líneas. */
 .palabra { display: inline-block; white-space: nowrap; }
+
+/* Ingreso: Google primero; Gmail + celular como alternativa plegable. */
+.ingreso-google { display: grid; justify-items: center; gap: .6rem; padding: .4rem 0 1rem; text-align: center; }
+.otra-forma { border-top: 1px solid var(--borde); padding-top: .9rem; }
+.otra-forma summary { cursor: pointer; text-align: center; color: var(--texto-suave); font-size: .9rem; }
+.otra-forma summary:hover { color: var(--primario); }
+.cuenta-google { display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem; margin-bottom: 1rem; border-radius: 12px; background: var(--tarjeta); border: 1px solid var(--borde); font-size: .9rem; }
+.cuenta-google i { color: var(--primario); }
