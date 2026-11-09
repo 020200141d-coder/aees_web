@@ -2,11 +2,15 @@
   head.ejs — <head> compartido por todas las páginas públicas.
   Recibe `titulo` (null en la portada) y opcionalmente `extraHead` (por ejemplo, el CSS de Leaflet).
   La meta csrf la leen los fetch() de los scripts para enviar el token en cada POST.
+  Tema (día / noche): el script corto de abajo pone data-tema en <html> ANTES de pintar,
+  así no hay "parpadeo" de colores. Se recuerda en localStorage('aees_tema'); por defecto
+  es la noche (la identidad de AeeS). El botón del header lo cambia (main.js → initTema).
 %>
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="noche">
 <head>
   <meta charset="UTF-8">
+  <script>try { if (localStorage.getItem('aees_tema') === 'dia') document.documentElement.dataset.tema = 'dia'; } catch (e) { /* sin almacenamiento: queda la noche */ }</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="<%= negocio.nombre %> — <%= negocio.descripcion %>">
   <meta name="theme-color" content="#0D1B2A">

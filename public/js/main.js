@@ -11,6 +11,9 @@
 //   • initGaleria        lightbox de los eventos realizados
 //   • initSonidoUI       botón de volumen del header (toca la intro al activarlo)
 //   • initPalabrasSonoras letras de los títulos que saltan y suenan
+//   • initTema           botón modo día / noche (se recuerda en el dispositivo)
+//   • initAvisoCuenta    invitación "Crea tu cuenta con Google" en la portada
+//   • initBurbujaWa      burbuja "¿Cotizamos tu evento?" junto al WhatsApp
 //
 //  Flujo al cargar: DOMContentLoaded → se enganchan los init*() y se añade
 //  body.cargado, que dispara la entrada animada del hero en el CSS.
@@ -773,6 +776,77 @@ function initPalabrasSonoras() {
 }
 
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Modo día / noche                                                   */
+/*  head.ejs ya puso html[data-tema] antes de pintar (sin parpadeo).   */
+/*  Aquí solo se cambia al tocar el botón y se recuerda la elección.   */
+/* ------------------------------------------------------------------ */
+function initTema() {
+  const btn = $('#btn-tema');
+  if (!btn) return;
+  const raiz = document.documentElement;
+  const meta = $('meta[name="theme-color"]');
+  const pintar = () => {
+    const dia = raiz.dataset.tema === 'dia';
+    btn.setAttribute('aria-label', dia ? 'Cambiar a modo noche' : 'Cambiar a modo día');
+    btn.setAttribute('aria-pressed', String(dia));
+    // Color de la barra del navegador en el celular, acorde al tema.
+    if (meta) meta.setAttribute('content', dia ? '#F4F7FB' : '#0D1B2A');
+  };
+  pintar();
+  btn.addEventListener('click', () => {
+    const tema = raiz.dataset.tema === 'dia' ? 'noche' : 'dia';
+    // Transición suave de colores solo durante el cambio (no en cada hover).
+    raiz.classList.add('cambiando-tema');
+    raiz.dataset.tema = tema;
+    try { localStorage.setItem('aees_tema', tema); } catch (e) { /* sin almacenamiento */ }
+    pintar();
+    setTimeout(() => raiz.classList.remove('cambiando-tema'), 450);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Invitación "Crea tu cuenta en un toque" (portada, sin sesión)      */
+/*  Entra a los 2,5 s; "Ahora no" la oculta 7 días en el dispositivo. */
+/* ------------------------------------------------------------------ */
+function initAvisoCuenta() {
+  const aviso = $('#aviso-cuenta');
+  if (!aviso) return;
+  const CLAVE = 'aees_aviso_cuenta';
+  const SIETE_DIAS = 7 * 24 * 3600 * 1000;
+  try {
+    const cerradoEn = Number(localStorage.getItem(CLAVE) || 0);
+    if (Date.now() - cerradoEn < SIETE_DIAS) { aviso.classList.add('descartado'); return; }
+  } catch (e) { /* sin almacenamiento: se muestra igual */ }
+  setTimeout(() => aviso.classList.add('visible'), 2500);
+  $$('[data-cerrar-aviso]', aviso).forEach(b => b.addEventListener('click', () => {
+    aviso.classList.remove('visible');
+    try { localStorage.setItem(CLAVE, String(Date.now())); } catch (e) { /* nada */ }
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/* Burbuja del WhatsApp flotante: "¿Cotizamos tu evento?"             */
+/*  Aparece a los 6 s, una vez por visita (sessionStorage), y se va   */
+/*  sola a los 14 s para no estorbar.                                 */
+/* ------------------------------------------------------------------ */
+function initBurbujaWa() {
+  const burbuja = $('#wa-burbuja');
+  if (!burbuja) return;
+  try { if (sessionStorage.getItem('aees_burbuja_wa')) return; } catch (e) { /* nada */ }
+  const cerrar = () => {
+    burbuja.classList.remove('visible');
+    try { sessionStorage.setItem('aees_burbuja_wa', '1'); } catch (e) { /* nada */ }
+  };
+  setTimeout(() => {
+    burbuja.hidden = false;
+    requestAnimationFrame(() => burbuja.classList.add('visible'));
+    setTimeout(cerrar, 14000);
+  }, 6000);
+  $('.wa-burbuja-cerrar', burbuja).addEventListener('click', cerrar);
+  $('a', burbuja).addEventListener('click', cerrar);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Pequeña pausa para que se note la entrada animada del hero.
   setTimeout(marcarCargado, 120);
@@ -799,4 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initFormulario();
   initSonidoUI();
   initPalabrasSonoras();
+  initTema();
+  initAvisoCuenta();
+  initBurbujaWa();
 });

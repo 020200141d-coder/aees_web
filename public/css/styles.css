@@ -849,3 +849,105 @@ details.clausulas { margin-bottom: .8rem; }
 .otra-forma summary:hover { color: var(--primario); }
 .cuenta-google { display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem; margin-bottom: 1rem; border-radius: 12px; background: var(--tarjeta); border: 1px solid var(--borde); font-size: .9rem; }
 .cuenta-google i { color: var(--primario); }
+
+/* ══ Modo día ════════════════════════════════════════════════════════════
+   html[data-tema="dia"] (lo pone head.ejs antes de pintar; lo cambia el botón del header).
+   Solo se cambian los TOKENS: todo el sitio usa var(--...), así que se adapta solo.
+   El hero (foto de escenario) y el header transparente sobre él siguen oscuros a propósito:
+   el texto claro sobre la foto es lo que se lee bien, y da contraste con el resto claro. */
+[data-tema="dia"] {
+  --bg: #F4F7FB;
+  --superficie: #FFFFFF;
+  --tarjeta: #EAF0F7;
+  --superficie-2: #E1E9F2;
+  --borde: #D3DCE7;
+  --borde-fuerte: #B1C0D1;
+  --texto: #0D1B2A;
+  --texto-suave: #4A6480;
+  --primario: #C27C00;          /* dorado más oscuro: se lee sobre blanco */
+  --primario-rgb: 194, 124, 0;
+  --secundario: #CF5A28;
+  --secundario-rgb: 207, 90, 40;
+  --disponible: #1E9150;
+  --no-disponible: #C23B2A;
+  --sombra: 0 22px 50px -28px rgba(13, 27, 42, 0.35);
+  --grid-linea: rgba(13, 27, 42, 0.07);
+  color-scheme: light;
+}
+/* Zonas que siguen de noche aunque el sitio esté de día. */
+[data-tema="dia"] .hero,
+[data-tema="dia"] .header:not(.con-fondo):not(.solido) {
+  --bg: #0D1B2A; --superficie: #0F2035; --tarjeta: #0B1929; --superficie-2: #132a44;
+  --borde: #1E3550; --borde-fuerte: #2c4a6b; --texto: #E8F4FF; --texto-suave: #9BB4CC;
+  --primario: #F5A623; --primario-rgb: 245, 166, 35; --secundario: #E8784A; --secundario-rgb: 232, 120, 74;
+  color: var(--texto);
+}
+/* Logo: "ACÚSTICO" toma el color del texto (blanco de noche, azul marino de día). */
+.logo-acustico { fill: var(--texto); }
+[data-tema="dia"] .swal2-container.swal2-backdrop-show:has(> .swal2-modal) { background: rgba(13, 27, 42, 0.45) !important; }
+/* Transición suave SOLO mientras se cambia de tema (main.js agrega la clase 450 ms). */
+.cambiando-tema *, .cambiando-tema *::before, .cambiando-tema *::after { transition: background-color .4s, color .4s, border-color .4s, fill .4s !important; }
+
+/* Botón día / noche: de noche muestra el sol (pasar a día); de día, la luna. */
+.btn-tema .icono-noche { display: none; }
+[data-tema="dia"] .btn-tema .icono-dia { display: none; }
+[data-tema="dia"] .btn-tema .icono-noche { display: inline; }
+.btn-tema .icono-dia { color: var(--primario); }
+.btn-tema i { transition: transform .3s var(--ease); }
+.btn-tema:hover i { transform: rotate(25deg); }
+
+/* ══ "Contáctanos" en el menú: botón dorado que llama la atención ═══════ */
+.nav-links a.nav-contacto { display: inline-flex; align-items: center; gap: .45rem; margin-left: .35rem; padding: .5rem 1rem; border-radius: 999px; font-weight: 700; color: var(--sobre-primario); background: linear-gradient(135deg, var(--primario), #ffc15c); box-shadow: 0 8px 22px -10px rgba(var(--primario-rgb), .9); animation: brillo-contacto 3.2s ease-in-out infinite; }
+.nav-links a.nav-contacto::after { display: none; }
+.nav-links a.nav-contacto:hover { color: var(--sobre-primario); transform: translateY(-1px); }
+@keyframes brillo-contacto { 0%, 100% { box-shadow: 0 8px 22px -10px rgba(var(--primario-rgb), .9); } 50% { box-shadow: 0 0 0 4px rgba(var(--primario-rgb), .18), 0 8px 26px -8px rgba(var(--primario-rgb), 1); } }
+@media (max-width: 900px) { .nav-links a.nav-contacto { margin: .6rem 0 0; justify-content: center; } }
+
+/* Llamado de contacto en la portada: WhatsApp y Llamar, grandes y visibles. */
+.contacto-llamado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; margin-bottom: 2rem; padding: 1.2rem 1.4rem; border-radius: 20px; background: linear-gradient(120deg, rgba(37, 211, 102, .14), rgba(var(--primario-rgb), .14)); border: 1px solid rgba(37, 211, 102, .45); }
+.contacto-llamado > div:first-child { display: grid; gap: .2rem; min-width: 0; }
+.contacto-llamado b { font-family: var(--f-titulo); font-size: 1.15rem; }
+.contacto-llamado b i { color: #25d366; margin-right: .3rem; }
+.contacto-llamado span { color: var(--texto-suave); font-size: .9rem; }
+.contacto-llamado-botones { display: flex; flex-wrap: wrap; gap: .6rem; }
+@media (max-width: 560px) { .contacto-llamado-botones { width: 100%; } .contacto-llamado-botones .btn { flex: 1 1 100%; } }
+
+/* ══ Burbuja junto al WhatsApp flotante ══════════════════════════════════ */
+.wa-burbuja { position: relative; max-width: 250px; padding: .8rem 2.2rem .8rem 1rem; border-radius: 16px 16px 4px 16px; background: var(--superficie); border: 1px solid rgba(37, 211, 102, .55); box-shadow: var(--sombra); opacity: 0; transform: translateY(10px) scale(.95); transform-origin: bottom right; transition: opacity .35s var(--ease), transform .35s var(--ease-rebote); }
+.wa-burbuja.visible { opacity: 1; transform: none; }
+.wa-burbuja a { display: grid; gap: .15rem; }
+.wa-burbuja b { font-size: .95rem; }
+.wa-burbuja span { font-size: .8rem; color: var(--texto-suave); }
+.wa-burbuja-cerrar { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; color: var(--texto-suave); }
+.wa-burbuja-cerrar:hover { color: var(--texto); background: var(--superficie-2); }
+@media (max-width: 760px) { body.portada .wa-burbuja { display: none; } }
+
+/* ══ Invitación "Crea tu cuenta en un toque" (portada) ═══════════════════
+   Escondida con visibility (no display:none) para que Google pueda dibujar su botón
+   desde el inicio; main.js le pone .visible a los 2,5 s. */
+.aviso-cuenta { position: fixed; left: 20px; bottom: 20px; z-index: 170; width: min(370px, calc(100vw - 32px)); display: flex; gap: .9rem; padding: 1.1rem 1.2rem 1rem; border-radius: 22px; background: linear-gradient(var(--superficie), var(--superficie)) padding-box, linear-gradient(135deg, var(--primario), var(--secundario), #4285F4) border-box; border: 2px solid transparent; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .7), 0 0 40px -18px rgba(var(--primario-rgb), .8); visibility: hidden; opacity: 0; transform: translateY(30px) scale(.97); transition: opacity .45s var(--ease), transform .55s var(--ease-rebote), visibility 0s .55s; }
+.aviso-cuenta.visible { visibility: visible; opacity: 1; transform: none; transition: opacity .45s var(--ease), transform .55s var(--ease-rebote), visibility 0s; }
+.aviso-cuenta.descartado { display: none; }
+.aviso-cuenta-icono { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; font-size: 1.3rem; color: var(--sobre-primario); background: linear-gradient(135deg, var(--primario), #ffc15c); animation: regalo 2.4s ease-in-out infinite; }
+@keyframes regalo { 0%, 100% { transform: rotate(0); } 8% { transform: rotate(-10deg); } 16% { transform: rotate(8deg); } 24% { transform: rotate(0); } }
+.aviso-cuenta-cuerpo { display: grid; gap: .45rem; min-width: 0; justify-items: start; }
+.aviso-cuenta-etiqueta { font-family: var(--f-mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--primario); }
+.aviso-cuenta h2 { font-size: 1.2rem; padding-right: 1.4rem; }
+.aviso-cuenta p { font-size: .86rem; color: var(--texto-suave); line-height: 1.5; }
+.aviso-cuenta p b { color: var(--texto); }
+.aviso-cuenta .btn { padding: .7rem 1.1rem; font-size: .9rem; }
+.aviso-cuenta-luego { font-size: .8rem; color: var(--texto-suave); text-decoration: underline; text-underline-offset: 3px; }
+.aviso-cuenta-luego:hover { color: var(--texto); }
+.aviso-cuenta-cerrar { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; color: var(--texto-suave); }
+.aviso-cuenta-cerrar:hover { color: var(--texto); background: var(--superficie-2); }
+/* Celular: tarjeta a lo ancho, encima de la barra "Cotizar / WhatsApp". */
+@media (max-width: 760px) {
+  .aviso-cuenta { left: 16px; right: 16px; bottom: 84px; width: auto; }
+  .aviso-cuenta-icono { width: 40px; height: 40px; font-size: 1.1rem; }
+  /* Más compacta para no tapar el cotizador: título, una línea de beneficio y el botón. */
+  .aviso-cuenta { padding: .85rem 1rem .75rem; gap: .7rem; }
+  .aviso-cuenta h2 { font-size: 1.05rem; }
+  .aviso-cuenta p { font-size: .8rem; }
+  .aviso-cuenta-etiqueta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .aviso-cuenta-icono, .nav-links a.nav-contacto { animation: none; } }

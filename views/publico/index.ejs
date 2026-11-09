@@ -9,6 +9,7 @@
    5. Reseñas reales + fotos de eventos que cambian cada 2 s → "Ver eventos".
    6. Paquetes en oferta (el del medio, "Más elegido") → "Ver todos los combos".
    7. Cómo reservar y contacto. En el celular, barra fija "Cotizar / WhatsApp".
+   + Invitación flotante "Crea tu cuenta en un toque" con Google (partials/aviso-cuenta.ejs).
   Datos: src/rutas/publico.js. Ganchos de JS: public/js/main.js y public/js/portada.js.
 %>
 <%
@@ -218,6 +219,17 @@
         <h2>¿Algo muy específico o un evento grande?</h2>
         <p>Escríbenos y te respondemos con una propuesta.</p>
       </header>
+      <%# Llamado destacado: las dos formas más rápidas de hablar con una persona, bien visibles. %>
+      <div class="contacto-llamado" data-reveal>
+        <div>
+          <b><i class="fa-solid fa-headset"></i> ¿Prefieres hablar con una persona?</b>
+          <span>Te atendemos <%= negocio.horario || 'todos los días' %>. Respondemos en minutos.</span>
+        </div>
+        <div class="contacto-llamado-botones">
+          <a class="btn btn-wa magnetico" href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent('¡Hola AeeS! Quiero cotizar un evento.') %>" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Escribir por WhatsApp</a>
+          <a class="btn btn-primario magnetico" href="tel:+51<%= String(negocio.telefono || '').replace(/\D/g, '') %>"><i class="fa-solid fa-phone"></i> Llamar ahora</a>
+        </div>
+      </div>
       <div class="contacto-grid">
         <div class="contacto-info" data-stagger>
           <a class="contacto-card tilt" href="https://wa.me/<%= negocio.whatsapp %>" target="_blank" rel="noopener" data-reveal>
@@ -278,5 +290,7 @@
   <a href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent('¡Hola AeeS! Quiero cotizar un evento.') %>" class="btn btn-wa" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
 </nav>
 
+<%# Invitación a crear la cuenta con Google (solo si no ha ingresado). %>
+<%- include('../partials/aviso-cuenta') %>
 <%- include('../partials/modales') %>
 <%- include('../partials/footer', { scripts: ['/js/portada.js'] }) %>

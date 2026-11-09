@@ -18,13 +18,18 @@
       <% [['/catalogo', 'Catálogo'], ['/combos', 'Combos'], ['/eventos', 'Eventos'], ['/asistente', 'Arma tu evento']].forEach(([href, texto]) => { %>
         <li><a href="<%= href %>" class="<%= rutaActual === href ? 'activo' : '' %>" <%= rutaActual === href ? 'aria-current="page"' : '' %>><%= texto %></a></li>
       <% }) %>
-      <li><a href="<%= ir('contacto') %>" <%= enPortada ? 'data-scroll' : '' %>>Contacto</a></li>
+      <%# "Contáctanos" resalta como botón (dorado) para que se vea y se toque fácil. %>
+      <li><a href="<%= ir('contacto') %>" class="nav-contacto" <%= enPortada ? 'data-scroll' : '' %>><i class="fa-solid fa-headset"></i> Contáctanos</a></li>
     </ul>
 
     <div class="nav-acciones">
       <%# Volumen: reemplaza a la antigua pantalla "¿con sonido o sin sonido?". Las barras se mueven cuando está activo. %>
       <button class="btn-icono btn-volumen" id="btn-sonido" type="button" aria-label="Activar sonido del sitio" aria-pressed="false" title="Sonido del sitio">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path class="parlante" d="M4 9h3l5-4v14l-5-4H4z"/><path class="arco arco-1" d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/><path class="arco arco-2" d="M18 7a7 7 0 0 1 0 10"/><path class="silencio" d="M16 9l5 6M21 9l-5 6"/></svg>
+      </button>
+      <%# Día / noche: el ícono cambia solo con CSS según html[data-tema]. %>
+      <button class="btn-icono btn-tema" id="btn-tema" type="button" aria-label="Cambiar a modo día" title="Modo día / noche">
+        <i class="fa-solid fa-sun icono-dia" aria-hidden="true"></i><i class="fa-solid fa-moon icono-noche" aria-hidden="true"></i>
       </button>
       <a href="/mi-evento" class="btn-icono" aria-label="Mi evento" title="Mi evento">
         <i class="fa-solid fa-calendar-check"></i>

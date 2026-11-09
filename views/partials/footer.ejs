@@ -1,5 +1,7 @@
 <%#
   footer.ejs — pie, botones flotantes (WhatsApp y volver arriba), cursor y scripts.
+  El WhatsApp flotante lleva una burbuja "¿Cotizamos tu evento?" que aparece a los 6 s,
+  una vez por visita (main.js → initBurbujaWa), para que el contacto llame la atención.
   `scripts` (opcional) = lista de scripts extra de la página (asistente.js, mi-evento.js...).
   Orden: librerías por CDN → evento.js (carrito compartido) → main.js → scripts de la página.
 %>
@@ -47,6 +49,13 @@
     <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" /></svg>
     <i class="fa-solid fa-arrow-up"></i>
   </button>
+  <div class="wa-burbuja" id="wa-burbuja" hidden>
+    <button type="button" class="wa-burbuja-cerrar" aria-label="Cerrar el mensaje"><i class="fa-solid fa-xmark"></i></button>
+    <a href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent('¡Hola AeeS! Quiero cotizar un evento.') %>" target="_blank" rel="noopener">
+      <b>¿Cotizamos tu evento? 👋</b>
+      <span>Escríbenos por WhatsApp, respondemos rápido.</span>
+    </a>
+  </div>
   <a class="wa-flotante" href="https://wa.me/<%= negocio.whatsapp %>?text=<%= encodeURIComponent('¡Hola AeeS! Quiero información para un evento.') %>" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
 </div>
 
