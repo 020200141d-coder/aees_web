@@ -951,3 +951,13 @@ details.clausulas { margin-bottom: .8rem; }
   .aviso-cuenta-etiqueta { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .aviso-cuenta-icono, .nav-links a.nav-contacto { animation: none; } }
+
+/* ══ Botón flotante "Ingresar con Google" (encima del WhatsApp) ══════════
+   Círculo blanco con la "G" de Google; en computadora se despliega el texto al pasar el mouse. */
+.google-flotante { height: 52px; min-width: 52px; display: inline-flex; align-items: center; justify-content: center; gap: .6rem; padding: 0 14px; border-radius: 999px; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; box-shadow: 0 12px 28px -12px rgba(0, 0, 0, .55); font-weight: 600; font-size: .9rem; transition: transform .3s var(--ease-rebote), box-shadow .3s; }
+.google-flotante svg { width: 24px; height: 24px; flex: none; }
+.google-flotante-texto { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .4s var(--ease); }
+.google-flotante:hover { transform: translateY(-2px); box-shadow: 0 16px 34px -12px rgba(66, 133, 244, .7); }
+.google-flotante:hover .google-flotante-texto, .google-flotante:focus-visible .google-flotante-texto { max-width: 170px; }
+/* Mientras la invitación de la portada está abierta, el botón ya está en ella: se oculta el flotante. */
+body:has(.aviso-cuenta.visible) .google-flotante { opacity: 0; pointer-events: none; }

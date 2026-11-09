@@ -129,3 +129,20 @@ body.admin { background: #0a1522; font-size: 0.94rem; }
 .calendario .dia:hover .dia-nueva, .dia-nueva:focus-visible { opacity: 1; }
 .dia-nueva:hover { background: rgba(var(--primario-rgb), .15); }
 @media (hover: none) { .dia-nueva { opacity: .7; } }
+
+/* ══ Panel en modo día ═══════════════════════════════════════════════════
+   Los tokens de día vienen de styles.css ([data-tema="dia"]). La barra lateral
+   sigue oscura a propósito (como el hero del sitio): se distingue del contenido. */
+[data-tema="dia"] body.admin { background: var(--bg); }
+[data-tema="dia"] .lateral {
+  --bg: #0D1B2A; --superficie: #0F2035; --tarjeta: #0B1929; --superficie-2: #132a44;
+  --borde: #1E3550; --borde-fuerte: #2c4a6b; --texto: #E8F4FF; --texto-suave: #9BB4CC;
+  --primario: #F5A623; --primario-rgb: 245, 166, 35; --secundario: #E8784A;
+  color: var(--texto);
+}
+/* Botón día / noche del pie de la barra lateral. */
+.tema-panel { display: flex; align-items: center; gap: .6rem; padding: .5rem .2rem; color: var(--texto-suave); font-size: .82rem; text-align: left; }
+.tema-panel:hover { color: var(--primario); }
+.tema-panel .icono-noche { display: none; }
+[data-tema="dia"] .tema-panel .icono-dia { display: none; }
+[data-tema="dia"] .tema-panel .icono-noche { display: inline; }
