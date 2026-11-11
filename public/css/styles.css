@@ -1015,3 +1015,54 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
 input[type="range"]::-moz-range-track { height: 8px; border-radius: 99px; background: var(--superficie-2); border: 1px solid var(--borde-fuerte); }
 input[type="range"]::-moz-range-progress { height: 8px; border-radius: 99px; background: var(--primario); }
 input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 5px solid var(--primario); }
+
+/* ══ Portada: logo primero, lema debajo, cotizador compacto (2026-11-10) ══════
+   Orden de lectura que pidió el negocio: 1) el logo AeeS, grande; 2) el lema
+   "Soluciones acústicas, eléctricas y electrónicas"; 3) lo que ofrecen (chips).
+   El cotizador rápido pasa a una columna más angosta para no robarle protagonismo.
+   Toques tomados con moderación de las guías de interfaz de Apple (HIG):
+   material "vidrio" (desenfoque + saturación), bordes finos de 1px, control
+   segmentado para elegir entre dos opciones y botones que "ceden" al tocarlos. */
+.hero-b-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); }
+.hero-b .logo-hero { width: min(540px, 86vw); filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.45)); }
+.hero-lema { font-size: clamp(1.35rem, 2.8vw, 2.05rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; margin-top: .9rem; }
+.hero-sub { color: #c4d6e8; font-size: 1.02rem; margin: -.4rem 0 1.3rem; max-width: 520px; }
+
+/* Foto de fondo más visible: menos oscurecida y velo más liviano, pero el texto sigue legible. */
+.hero-foto { filter: saturate(1.15) contrast(1.05) brightness(0.62); }
+.hero::after { background: linear-gradient(180deg, rgba(13, 27, 42, 0.2) 0%, rgba(13, 27, 42, 0.42) 55%, var(--bg) 100%), radial-gradient(ellipse at 22% 42%, rgba(13, 27, 42, 0.45), rgba(13, 27, 42, 0.7) 78%); }
+[data-tema="dia"] .hero::after { background: linear-gradient(180deg, rgba(13, 27, 42, 0.2) 0%, rgba(13, 27, 42, 0.42) 45%, rgba(13, 27, 42, 0.35) 68%, rgba(244, 247, 251, 0.75) 90%, #F4F7FB 100%), radial-gradient(ellipse at 22% 42%, rgba(13, 27, 42, 0.45), rgba(13, 27, 42, 0.68) 78%); }
+
+/* Cotizador rápido: más angosto y apretado, con material de vidrio. */
+.cotizador-rapido { justify-self: end; width: 100%; max-width: 340px; gap: .55rem; padding: 1rem 1.05rem; border-radius: 20px; background: color-mix(in srgb, var(--superficie) 72%, transparent); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7); }
+.cotizador-rapido h2 { font-size: 1.05rem; }
+.cotizador-rapido .campo-simple { font-size: .85rem; gap: .25rem; }
+.cotizador-rapido select, .cotizador-rapido input[type="date"] { min-height: 40px; padding-block: .45rem; }
+.cotizador-rapido .resultado-rapido { padding: .65rem .8rem; }
+.cotizador-rapido #rapido-precio b { font-size: 1.6rem; }
+.cotizador-rapido .cotizador-acciones .btn { padding: .7rem 1rem; }
+
+/* Control segmentado (estilo iOS): un riel gris y la opción elegida "levantada". */
+.cotizador-rapido .dos-opciones { gap: 0; padding: 3px; border-radius: 12px; background: rgba(127, 127, 140, 0.18); }
+.cotizador-rapido .dos-opciones span { border: 0; border-radius: 9px; padding: .45rem .3rem; font-size: .8rem; color: var(--texto-suave); transition: background .25s var(--ease), color .2s, box-shadow .25s; }
+.cotizador-rapido .dos-opciones input:checked + span { background: var(--superficie); color: var(--texto); box-shadow: 0 3px 8px -2px rgba(0, 0, 0, 0.35), 0 0 0 .5px rgba(0, 0, 0, 0.08); }
+
+/* Botones que ceden un poco al tocarlos (respuesta táctil). */
+.btn:active, .btn-icono:active { scale: .97; }
+
+@media (max-width: 760px) {
+  .cotizador-rapido { max-width: none; justify-self: stretch; }
+  .hero-b .logo-hero { width: min(300px, 76vw); }
+  .hero-lema { font-size: 1.2rem; }
+  .hero-sub { font-size: .9rem; margin-bottom: .8rem; }
+}
+/* En la portada el cotizador muestra solo el paquete y el precio; el detalle de equipos
+   se ve al tocar "Ver propuesta completa". Así la tarjeta entra en la primera pantalla. */
+.cotizador-rapido #rapido-detalle { display: none; }
+.cotizador-rapido .cotizador-acciones { display: grid; gap: .4rem; }
+/* Pantallas medianas y celular: una sola columna (logo y lema arriba, cotizador debajo).
+   Va al final porque la regla de dos columnas de arriba pisaba la del celular. */
+@media (max-width: 1000px) {
+  .hero-b-grid { grid-template-columns: minmax(0, 1fr); }
+  .cotizador-rapido { justify-self: start; max-width: 420px; }
+}

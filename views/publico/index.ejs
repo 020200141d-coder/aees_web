@@ -41,8 +41,10 @@
         <h1 class="hero-anim hero-logo">
           <span class="oculto-accesible">AeeS Acústico: </span>
           <span aria-hidden="true"><%- include('../partials/logo', { completo: true, clase: 'logo-hero' }) %></span>
-          <span class="h1-frase">Sonido, luces y LED para que tu evento <span class="texto-acento">suene perfecto</span></span>
+          <%# Lema del negocio justo debajo del logo: es lo primero que se lee (logo → qué hacemos). %>
+          <span class="h1-frase hero-lema">Soluciones <span class="texto-acento">acústicas, eléctricas y electrónicas</span></span>
         </h1>
+        <p class="hero-sub hero-anim">Sonido, luces y pantallas LED para que tu evento suene perfecto.</p>
         <ul class="confianza hero-anim">
           <% confianza.forEach(([icono, texto]) => { %><li><i class="<%= icono %>"></i> <%= texto %></li><% }) %>
         </ul>
