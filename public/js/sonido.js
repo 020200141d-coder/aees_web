@@ -8,7 +8,7 @@
 //
 //  Intro "punch" electro deep (un golpe de bombo con clic,
 //  rumble, stab con eco), letras = pluck urbano al ritmo con kicks y 808, botones = hi-hat,
-//  logo y "agregar" = guitarra blues con bend (el bombo fuerte queda solo en la intro).
+//  logo = ping electrónico fino, "agregar" = guitarra blues (el bombo queda solo en la intro).
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
 //  eso todo empieza con el clic en el botón de volumen del header (la primera
@@ -298,12 +298,53 @@
     if (i % 8 === 0) bajo808(c, t, BAJOS[(i / 8) % BAJOS.length]);
   }
 
-  // Logo del hero: una nota de guitarra blues que sube un tono (Sol → La) y vibra.
+  // Logo del hero: "ping" electrónico fino (opción A elegida por el negocio).
+  // Antes era un bombo y luego una guitarra con overdrive: saturaban los parlantes.
+  // Ahora: La5 (880 Hz) triangular con un eco breve + la misma nota una octava abajo
+  // (La4, 440 Hz) muy suave para darle cuerpo. Un pasa-altos a 120 Hz asegura que
+  // no llegue nada más grave a los parlantes.
+  function ping(c, t, hz, salida, { dur = 0.3, vol = 0.09, envio = 0.35 } = {}) {
+    const f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(4500, t);                 // brillante al inicio...
+    f.frequency.exponentialRampToValueAtTime(1200, t + dur); // ...y se suaviza
+    envolvente(g, t, vol, dur, 0.003);
+    f.connect(g).connect(salida);
+    if (envio) { const e = c.createGain(); e.gain.value = envio; g.connect(e).connect(busPingEco(c)); }
+    const o = c.createOscillator();
+    o.type = 'triangle'; o.frequency.value = hz;
+    o.connect(f);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  // Eco propio del ping: corto (0,2 s) y suave, para que no se mezcle con el del stab.
+  let pingEco = null, sinGraves = null;
+  function busPingEco(c) {
+    if (pingEco) return pingEco;
+    pingEco = c.createDelay(1);
+    pingEco.delayTime.value = 0.2;
+    const realim = c.createGain(), oscuro = c.createBiquadFilter();
+    realim.gain.value = 0.28;
+    oscuro.type = 'lowpass'; oscuro.frequency.value = 2800;
+    pingEco.connect(oscuro).connect(realim).connect(pingEco);
+    oscuro.connect(salidaSinGraves(c));
+    return pingEco;
+  }
+  function salidaSinGraves(c) {
+    if (sinGraves) return sinGraves;
+    sinGraves = c.createBiquadFilter();
+    sinGraves.type = 'highpass'; sinGraves.frequency.value = 120;
+    sinGraves.connect(maestro);
+    return sinGraves;
+  }
+
   function logo() {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    guitarraBlues(c, c.currentTime + 0.01, 392, { subeA: 440, dur: 1, vol: 0.2 });
+    const t = c.currentTime + 0.01, salida = salidaSinGraves(c);
+    ping(c, t, 880, salida);
+    ping(c, t, 440, salida, { dur: 0.35, vol: 0.07, envio: 0.15 });
   }
 
   function guardar() {
