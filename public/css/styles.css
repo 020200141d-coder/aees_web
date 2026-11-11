@@ -1084,3 +1084,19 @@ input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius
 .hero.hero-b, [data-tema="dia"] .hero.hero-b { padding-bottom: 170px; }
 /* Los haces de luz también se apagan antes del borde (si no, dejaban una línea de corte). */
 .haces { -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent calc(100% - 150px)); mask-image: linear-gradient(180deg, #000 40%, transparent calc(100% - 150px)); }
+
+/* ══ Modo día con más contraste (2026-11-10) ══════════════════════════════════
+   Quejas: "se pone muy blanco, no deja ver los botones, las letras, las imágenes",
+   sobre todo en la parte baja del hero. Cambios:
+   • el paso a blanco del hero es más corto (últimos 120px) y sin zona "lechosa";
+   • textos secundarios y bordes más oscuros;
+   • las tarjetas llevan sombra para despegarse del fondo claro. */
+[data-tema="dia"] {
+  --texto-suave: #36506B;
+  --borde: #C6D2E0;
+  --borde-fuerte: #8FA4BC;
+}
+[data-tema="dia"] .hero::after { background: linear-gradient(180deg, rgba(13, 27, 42, 0.2) 0%, rgba(13, 27, 42, 0.42) 50%, rgba(13, 27, 42, 0.5) calc(100% - 120px), #F4F7FB 100%), radial-gradient(ellipse at 22% 42%, rgba(13, 27, 42, 0.45), rgba(13, 27, 42, 0.68) 78%); }
+[data-tema="dia"] .hero-canvas, [data-tema="dia"] .haces { -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent calc(100% - 140px)); mask-image: linear-gradient(180deg, #000 45%, transparent calc(100% - 140px)); }
+[data-tema="dia"] :is(.equipo-card, .combo-card, .servicio-card, .contacto-card, .promo, .foto-card) { box-shadow: 0 12px 30px -18px rgba(13, 27, 42, 0.45); }
+[data-tema="dia"] .promo { background: linear-gradient(120deg, rgba(var(--primario-rgb), .14), rgba(var(--secundario-rgb), .08)), #fff; }
