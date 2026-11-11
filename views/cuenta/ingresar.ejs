@@ -3,7 +3,8 @@
   1. Google (lo más rápido, si hay GOOGLE_CLIENT_ID): botón oficial de Google Identity
      Services. El callback envía el token a POST /cuenta/google, que lo verifica con Google.
      Si es la primera vez, después se pide SOLO el celular (/cuenta/completar).
-  2. Gmail + celular (alternativa sin Google): POST /cuenta/ingresar. Si es nuevo, pide su nombre.
+  2. Correo + celular (cualquier correo; para quien no tiene Gmail): POST /cuenta/ingresar.
+     Si es nuevo, pide su nombre. Google va primero porque es un toque y Google ya verificó el correo.
      Si su celular tenía una cuenta antigua con PIN, pide el PIN una sola vez (datos.pedirPin).
   En ambos casos queda recordado 6 meses en el dispositivo (DIAS_CLIENTE en middleware/auth.js).
 %>
@@ -25,17 +26,21 @@
         <%# Opción principal: Google. Si es nuevo, el siguiente paso solo pide el celular. %>
         <div class="ingreso-google">
           <div id="g_id_onload" data-client_id="<%= googleClientId %>" data-callback="aeesGoogle" data-auto_prompt="false" data-ux_mode="popup" data-volver="<%= volver %>"></div>
-          <div class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black" data-size="large" data-text="continue_with" data-locale="es" data-width="300"></div>
-          <small class="suave">Es lo más rápido. Si es tu primera vez, luego solo te pedimos tu celular.</small>
+          <%# Se ve nuestro botón (.google-boton-cara); encima, casi invisible, el oficial de Google recibe el toque. %>
+          <div class="google-boton google-boton-ingreso">
+            <span class="google-boton-cara" aria-hidden="true"><%- include('../partials/google-g') %> Continuar con Google</span>
+            <div class="g_id_signin google-boton-real" data-type="standard" data-shape="pill" data-theme="outline" data-size="large" data-text="continue_with" data-locale="es" data-width="320"></div>
+          </div>
+          <small class="suave"><b>Recomendado</b> si tienes Gmail: un toque y listo. Si es tu primera vez, luego solo te pedimos tu celular.</small>
         </div>
         <details class="otra-forma"<%= error || datos.email ? ' open' : '' %>>
-          <summary>O ingresa con tu Gmail y celular</summary>
+          <summary>¿No tienes Gmail? Ingresa con tu correo y celular</summary>
       <% } %>
 
       <form method="post" action="/cuenta/ingresar" style="display:grid;gap:.9rem;margin-top:.8rem">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
         <input type="hidden" name="volver" value="<%= volver %>">
-        <label class="campo-simple">Tu Gmail<input name="email" type="email" inputmode="email" maxlength="120" placeholder="tunombre@gmail.com" value="<%= datos.email || '' %>" autocomplete="email" required <%= googleClientId ? '' : 'autofocus' %>></label>
+        <label class="campo-simple">Tu correo <small>(Gmail, Hotmail, Outlook, el que uses)</small><input name="email" type="email" inputmode="email" maxlength="120" placeholder="tunombre@correo.com" value="<%= datos.email || '' %>" autocomplete="email" required <%= googleClientId ? '' : 'autofocus' %>></label>
         <label class="campo-simple">Celular (WhatsApp)<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" value="<%= datos.celular || '' %>" autocomplete="tel" required></label>
         <% if (datos.pedirPin) { %>
           <label class="campo-simple">PIN de tu cuenta anterior <small>(solo esta vez)</small><input name="pin" type="password" inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required></label>

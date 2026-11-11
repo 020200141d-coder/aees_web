@@ -674,9 +674,9 @@ router.post('/resenas/:id/eliminar', staff, a(async (req, res) => {
 
 // ── Clientes (admin) ────────────────────────────────────────────────────────
 // El admin registra clientes que llegan por WhatsApp o en persona: con su
-// Gmail y celular, el cliente después puede entrar solo a la web (ve sus
-// reservas y puntos). El correo puede no ser Gmail, pero entonces el cliente
-// no podrá ingresar por sí mismo (el ingreso pide Gmail).
+// correo y celular, el cliente después puede entrar solo a la web (ve sus
+// reservas y puntos). Sirve cualquier correo; con Gmail además puede usar
+// el botón de Google.
 const celularValido = c => /^9\d{8}$/.test(c);
 const limpiarCel = v => String(v || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
 function leerCliente(b) {
@@ -703,7 +703,7 @@ router.post('/clientes', soloAdmin, a(async (req, res) => {
   const e = await erroresCliente(d, null);
   if (Object.keys(e).length) { req.flash('error', Object.values(e).join(' ')); return res.redirect('/admin/clientes?nuevo=1'); }
   const u = await db.insertar('usuarios', { rol: 'cliente', ...d });
-  req.flash('exito', `Cliente ${u.nombre} registrado.${d.email && !/@(gmail|googlemail)\.com$/.test(d.email) ? ' Ojo: sin Gmail no podrá entrar solo a la web.' : ''}`);
+  req.flash('exito', `Cliente ${u.nombre} registrado.`);
   res.redirect(req.body.y_reservar ? `/admin/reservas/nueva?cliente=${u.id}` : `/admin/clientes/${u.id}`);
 }));
 

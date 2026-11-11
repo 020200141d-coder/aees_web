@@ -75,7 +75,7 @@ const quiereJSON = req => req.path.startsWith('/api/') || req.originalUrl.starts
 
 function requiereCliente(req, res, next) {
   if (req.usuario) return next();
-  if (quiereJSON(req)) return res.status(401).json({ ok: false, error: 'Ingresa con tu Gmail y tu celular para continuar.', login: true });
+  if (quiereJSON(req)) return res.status(401).json({ ok: false, error: 'Ingresa con tu cuenta de Google o con tu correo y celular para continuar.', login: true });
   res.redirect(`/cuenta/ingresar?volver=${encodeURIComponent(req.originalUrl)}`);
 }
 

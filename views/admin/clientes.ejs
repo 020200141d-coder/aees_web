@@ -1,7 +1,7 @@
 <%#
   admin/clientes.ejs — clientes (CRUD).
   • Lista con búsqueda; "frecuente" = N reservas pagadas o más (Ajustes → reglas).
-  • Registrar un cliente nuevo con su Gmail y celular (llegó por WhatsApp o en persona):
+  • Registrar un cliente nuevo con su correo y celular (llegó por WhatsApp o en persona):
     después él puede entrar solo a la web con esos mismos datos.
   • "Ver" abre su ficha: editar datos, puntos, reservas y "Nueva reserva para este cliente".
 %>
@@ -41,12 +41,12 @@
 
   <form method="post" action="/admin/clientes" class="tarjeta" id="nuevo-cliente" novalidate>
     <h2><i class="fa-solid fa-user-plus"></i> Registrar cliente</h2>
-    <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">Con su <b>Gmail y celular</b> podrá entrar solo a la web, ver sus reservas y sumar puntos.</p>
+    <p class="suave" style="font-size:.85rem;margin-bottom:.8rem">Con su <b>correo y celular</b> podrá entrar solo a la web, ver sus reservas y sumar puntos.</p>
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <div class="form-rejilla">
       <label class="campo-simple ancho">Nombre y apellido<input name="nombre" maxlength="80" required <%= nuevo ? 'autofocus' : '' %>></label>
       <label class="campo-simple">Celular (WhatsApp)<input name="celular" inputmode="tel" maxlength="12" placeholder="987 654 321" required></label>
-      <label class="campo-simple">Gmail<input name="email" type="email" maxlength="120" placeholder="cliente@gmail.com"></label>
+      <label class="campo-simple">Correo <small>(mejor Gmail)</small><input name="email" type="email" maxlength="120" placeholder="cliente@gmail.com"></label>
       <label class="campo-simple">DNI (opcional)<input name="dni" inputmode="numeric" maxlength="12"></label>
     </div>
     <div class="form-pie">

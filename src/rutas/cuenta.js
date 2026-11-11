@@ -92,8 +92,10 @@ router.post('/completar', requiereCliente, limiteLogin, a(async (req, res) => {
   res.redirect(volver);
 }));
 
-// Gmail (también @googlemail.com, que es lo mismo). Se guarda en minúsculas.
-const esGmail = e => /^[a-z0-9.+_-]+@(gmail|googlemail)\.com$/.test(e);
+// Cualquier correo válido (Gmail, Hotmail, Outlook, Yahoo, el de la universidad...).
+// Antes solo Gmail; ahora Gmail sigue recomendado por el botón de Google (un toque),
+// pero quien no tiene Gmail igual puede crear su cuenta con correo + celular.
+const esCorreo = e => /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e);
 const limpiarCelular = v => String(v || '').replace(/\D/g, '').replace(/^51(?=9\d{8}$)/, '');
 // Para los mensajes: muestra el correo a medias (a•••z@gmail.com).
 const ocultarCorreo = e => e.replace(/^(.)(.*)(.)@/, (m, a, b, c) => `${a}${'•'.repeat(Math.min(b.length, 5))}${c}@`);
@@ -106,20 +108,20 @@ router.post('/ingresar', limiteLogin, a(async (req, res) => {
   const volver = volverSeguro(req.body.volver);
   const mostrar = (error, extra = {}) => res.status(400).render('cuenta/ingresar', { titulo: 'Ingresar', volver, error, datos: { email, celular, nombre, ...extra } });
 
-  if (!esGmail(email)) return mostrar('Escribe tu correo de Gmail (termina en @gmail.com).');
+  if (!esCorreo(email)) return mostrar('Escribe un correo válido, por ejemplo tunombre@gmail.com.');
   if (!/^9\d{8}$/.test(celular)) return mostrar('Escribe tu celular de 9 dígitos (empieza en 9).');
 
   let u = await db.buscarUno('usuarios', { email });
   if (u) {
     if (u.rol !== 'cliente') return mostrar('Ese correo es del personal: ingresa por el panel.');
-    if (u.celular && u.celular !== celular) return mostrar('El celular no coincide con el de ese Gmail. Si cambiaste de número, escríbenos por WhatsApp.');
+    if (u.celular && u.celular !== celular) return mostrar('El celular no coincide con el de ese correo. Si cambiaste de número, escríbenos por WhatsApp.');
     if (!u.celular) u = await db.actualizar('usuarios', u.id, { celular });
   } else {
     const porCelular = await db.buscarUno('usuarios', { celular });
-    if (porCelular?.email) return mostrar(`Ese celular ya está registrado con otro Gmail (${ocultarCorreo(porCelular.email)}).`);
+    if (porCelular?.email) return mostrar(`Ese celular ya está registrado con otro correo (${ocultarCorreo(porCelular.email)}).`);
     if (porCelular) {
-      // Cuenta antigua de celular + PIN: se pide el PIN una sola vez para unirle este Gmail.
-      if (!pin) return mostrar('Tu celular ya tiene una cuenta con PIN. Escríbelo esta única vez para unirle tu Gmail.', { pedirPin: true });
+      // Cuenta antigua de celular + PIN: se pide el PIN una sola vez para unirle este correo.
+      if (!pin) return mostrar('Tu celular ya tiene una cuenta con PIN. Escríbelo esta única vez para unirle tu correo.', { pedirPin: true });
       if (!verificarClave(pin, porCelular.clave_hash)) return mostrar('El PIN no coincide con ese celular.', { pedirPin: true });
       u = await db.actualizar('usuarios', porCelular.id, { email });
     } else {
@@ -134,7 +136,7 @@ router.post('/ingresar', limiteLogin, a(async (req, res) => {
   res.redirect(volver);
 }));
 
-// Ruta anterior (celular + PIN): se mantiene para no romper formularios viejos; ahora pide el Gmail.
+// Ruta anterior (celular + PIN): se mantiene para no romper formularios viejos; ahora pide correo + celular.
 router.post('/celular', (req, res) => res.redirect(303, `/cuenta/ingresar?volver=${encodeURIComponent(volverSeguro(req.body.volver))}`));
 
 router.post('/salir', (req, res) => {

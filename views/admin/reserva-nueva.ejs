@@ -21,7 +21,7 @@
             <option value="">Elige un cliente…</option>
             <% clientes.forEach(c => { %><option value="<%= c.id %>" <%= c.id === clienteId ? 'selected' : '' %>><%= c.nombre %> · <%= c.celular || c.email || '' %></option><% }) %>
           </select>
-          <small class="ayuda">¿Es nuevo? <a href="/admin/clientes?nuevo=1" style="color:var(--primario)">Regístralo con su Gmail y celular</a> y vuelve aquí.</small>
+          <small class="ayuda">¿Es nuevo? <a href="/admin/clientes?nuevo=1" style="color:var(--primario)">Regístralo con su correo y celular</a> y vuelve aquí.</small>
         </label>
       </div>
     </section>
