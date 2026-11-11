@@ -6,8 +6,8 @@
 //   • Se puede explicar cómo se construye un sonido: osciladores (ondas),
 //     filtros y envolventes de volumen (gain), igual que en una consola.
 //
-//  Todo usa el mismo kit de electro deep: intro "punch" (redoble de 3 bombos,
-//  rumble, stab con eco), letras = teclado de bajos, botones = hi-hat cerrado.
+//  Intro "punch" electro deep (un golpe de bombo con clic,
+//  rumble, stab con eco), letras = pluck urbano al ritmo con kicks y 808, botones = hi-hat.
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
 //  eso todo empieza con el clic en el botón de volumen del header (la primera
@@ -80,7 +80,7 @@
     return eco;
   }
 
-  function bomboPunch(c, t, vol = 1) {
+  function bomboPunch(c, t, vol = 1, conSub = true) {
     const o = c.createOscillator(), g = c.createGain();
     o.frequency.setValueAtTime(180, t);
     o.frequency.exponentialRampToValueAtTime(48, t + 0.08);
@@ -89,12 +89,14 @@
     o.connect(g).connect(maestro);
     o.start(t); o.stop(t + 0.45);
     // Sub: un seno grave (50 → 41 Hz) que queda sonando bajo el golpe: más "frecuencias bajas".
-    const sub = c.createOscillator(), gs = c.createGain();
-    sub.frequency.setValueAtTime(50, t);
-    sub.frequency.exponentialRampToValueAtTime(41, t + 0.5);
-    envolvente(gs, t + 0.01, 0.45 * vol, 0.7, 0.02);
-    sub.connect(gs).connect(maestro);
-    sub.start(t); sub.stop(t + 0.75);
+    if (conSub) {
+      const sub = c.createOscillator(), gs = c.createGain();
+      sub.frequency.setValueAtTime(50, t);
+      sub.frequency.exponentialRampToValueAtTime(41, t + 0.5);
+      envolvente(gs, t + 0.01, 0.45 * vol, 0.7, 0.02);
+      sub.connect(gs).connect(maestro);
+      sub.start(t); sub.stop(t + 0.75);
+    }
     const clic = ruido(c, 0.02), f = c.createBiquadFilter(), gc = c.createGain();
     f.type = 'highpass'; f.frequency.value = 3000;
     envolvente(gc, t, 0.25 * vol, 0.015, 0.001);
@@ -102,11 +104,11 @@
     clic.start(t); clic.stop(t + 0.02);
   }
 
-  function rumble(c, t, dur) {
+  function rumble(c, t, dur, vol = 0.35) {
     const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
     o.type = 'sawtooth'; o.frequency.value = 41.2;
     f.type = 'lowpass'; f.frequency.value = 120;
-    envolvente(g, t + 0.03, 0.35, dur, 0.05);
+    envolvente(g, t + 0.03, vol, dur, 0.05);
     o.connect(f).connect(g).connect(maestro);
     o.start(t); o.stop(t + dur + 0.1);
   }
@@ -142,15 +144,14 @@
   function intro() {
     const c = contexto();
     if (!c) return;
-    // Un solo "punch" (~1,2 s): un redoble de 3 bombos seguidos en semicorcheas que
-    // crecen (bum-bum-BUM) y en el último entran el rumble, el stab y el hat.
-    // Antes los bombos iban separados una negra cada uno y la intro se alargaba.
-    const t = c.currentTime + 0.05, semi = NEGRA / 4;
-    [0.6, 0.8, 1.1].forEach((vol, i) => bomboPunch(c, t + i * semi, vol));
-    const golpe = t + 2 * semi;
-    rumble(c, golpe, 0.9);
-    stab(c, golpe, 0.4);
-    hatAbierto(c, golpe + NEGRA / 2);
+    // Opción A "Punch" (~1,2 s), la que eligió el negocio: UN golpe seco con clic,
+    // rumble grave debajo, stab de acorde menor con eco que se apaga y un hi-hat
+    // abierto a contratiempo. Volumen moderado (antes se oía muy fuerte).
+    const t = c.currentTime + 0.05;
+    bomboPunch(c, t, 0.75, false);
+    rumble(c, t, 0.9, 0.25);
+    stab(c, t, 0.4, 0.05);
+    hatAbierto(c, t + NEGRA / 2, 0.07);
   }
 
   // ── El resto del sitio con el mismo kit deep ──────────────────────────────
@@ -186,30 +187,64 @@
     stab(c, t, 0.3, 0.06);
   }
 
-  // Bajo de sintetizador (una tecla): seno grave (el cuerpo) + diente de sierra filtrado
-  // (el "gruñido" que hace que se oiga también en parlantes de laptop).
-  function bajoNota(c, t, hz, vol = 0.16) {
-    const g = c.createGain(), f = c.createBiquadFilter();
-    f.type = 'lowpass'; f.Q.value = 3;
-    f.frequency.setValueAtTime(900, t);
-    f.frequency.exponentialRampToValueAtTime(180, t + 0.3);
-    envolvente(g, t, vol, 0.38, 0.004);
+  // ── Letras de los títulos: pluck urbano al ritmo, con kicks y bajo 808 ─────
+  // Cada letra espera la próxima semicorchea del MISMO pulso de la intro (126 BPM, tempo
+  // de techno / tech house), así todo el sitio va en un solo groove electrónico y al
+  // pasar el mouse rápido por un título suena a ritmo y no a notas sueltas.
+  //   • cada letra: nota "pluck" (sierra + cuadrada desafinada por un filtro que se cierra)
+  //   • cada 4 letras: hi-hat + un kick suave
+  //   • cada 8 letras: una nota de bajo 808 (seno grave saturado) para combinar con los kicks
+  const SEMI_LETRAS = SEMI;   // 1/16 a 126 BPM, igual que la intro
+  const alPulsoLetras = c => Math.max(Math.ceil(c.currentTime / SEMI_LETRAS) * SEMI_LETRAS, c.currentTime + 0.005);
+
+  function pluck(c, t, hz, vol = 0.12) {
+    const f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'lowpass'; f.Q.value = 7;
+    f.frequency.setValueAtTime(3200, t);
+    f.frequency.exponentialRampToValueAtTime(260, t + 0.2);
+    envolvente(g, t, vol, 0.24, 0.003);
     f.connect(g).connect(maestro);
-    const sierra = c.createOscillator(), seno = c.createOscillator(), gs = c.createGain();
-    sierra.type = 'sawtooth'; sierra.frequency.value = hz;
-    seno.frequency.value = hz; gs.gain.value = 1.4;
-    sierra.connect(f); seno.connect(gs).connect(f);
-    [sierra, seno].forEach(o => { o.start(t); o.stop(t + 0.42); });
+    [['sawtooth', 0], ['square', 8]].forEach(([tipo, desafinar]) => {
+      const o = c.createOscillator();
+      o.type = tipo; o.frequency.value = hz; o.detune.value = desafinar;
+      o.connect(f);
+      o.start(t); o.stop(t + 0.3);
+    });
   }
 
-  // Letras de los títulos = un teclado de bajos: cada letra es una tecla de la escala
-  // de La menor en el registro grave (La2 a Re4). Suena al instante, como tocar teclas.
-  const ESCALA = [110, 130.81, 146.83, 164.81, 196, 220, 261.63, 293.66];
-  function nota(i = 0, vol = 0.16) {
+  // Saturación suave (curva tanh) para que el 808 "gruña" y se oiga en parlantes chicos.
+  let saturador = null;
+  function saturar(c) {
+    if (saturador) return saturador;
+    saturador = c.createWaveShaper();
+    const curva = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) curva[i] = Math.tanh(2.5 * (i / 512 - 1));
+    saturador.curve = curva;
+    saturador.connect(maestro);
+    return saturador;
+  }
+
+  // Bajo 808: seno que arranca una octava arriba y cae a su nota (el "bwoom").
+  function bajo808(c, t, hz = 55, dur = 0.7, vol = 0.45) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(hz * 2, t);
+    o.frequency.exponentialRampToValueAtTime(hz, t + 0.06);
+    envolvente(g, t, vol, dur, 0.004);
+    o.connect(g).connect(saturar(c));
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  // La menor pentatónica (La, Do, Re, Mi, Sol): suena bien en cualquier orden.
+  const ESCALA = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
+  const BAJOS = [55, 65.41, 49];   // La1, Do2, Sol1: el 808 va cambiando de nota
+  function nota(i = 0, vol = 0.12) {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    bajoNota(c, c.currentTime, ESCALA[i % ESCALA.length], vol);
+    const t = alPulsoLetras(c);
+    pluck(c, t, ESCALA[i % ESCALA.length], vol);
+    if (i % 4 === 0) { hatCerrado(c, t, 0.08); bomboPunch(c, t, 0.4, false); }
+    if (i % 8 === 0) bajo808(c, t, BAJOS[(i / 8) % BAJOS.length]);
   }
 
   // Logo del hero: bombo + rumble corto (el "temblor" del sub).
