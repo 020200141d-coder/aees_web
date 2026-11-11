@@ -6,8 +6,8 @@
 //   • Se puede explicar cómo se construye un sonido: osciladores (ondas),
 //     filtros y envolventes de volumen (gain), igual que en una consola.
 //
-//  Todo usa el mismo kit de electro deep: intro "punch" (3 bombos a 126 BPM,
-//  rumble, stab con eco), letras = stabs al ritmo, botones = hi-hat cerrado.
+//  Todo usa el mismo kit de electro deep: intro "punch" (redoble de 3 bombos,
+//  rumble, stab con eco), letras = teclado de bajos, botones = hi-hat cerrado.
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
 //  eso todo empieza con el clic en el botón de volumen del header (la primera
@@ -142,17 +142,20 @@
   function intro() {
     const c = contexto();
     if (!c) return;
-    const t = c.currentTime + 0.05;
-    [0, 1, 2].forEach(i => bomboPunch(c, t + i * NEGRA, i === 0 ? 1.1 : 0.9));
-    rumble(c, t, NEGRA * 3);
-    stab(c, t, 0.4);
-    [0, 1, 2].forEach(i => hatAbierto(c, t + i * NEGRA + NEGRA / 2));
+    // Un solo "punch" (~1,2 s): un redoble de 3 bombos seguidos en semicorcheas que
+    // crecen (bum-bum-BUM) y en el último entran el rumble, el stab y el hat.
+    // Antes los bombos iban separados una negra cada uno y la intro se alargaba.
+    const t = c.currentTime + 0.05, semi = NEGRA / 4;
+    [0.6, 0.8, 1.1].forEach((vol, i) => bomboPunch(c, t + i * semi, vol));
+    const golpe = t + 2 * semi;
+    rumble(c, golpe, 0.9);
+    stab(c, golpe, 0.4);
+    hatAbierto(c, golpe + NEGRA / 2);
   }
 
   // ── El resto del sitio con el mismo kit deep ──────────────────────────────
-  // Cuantizar: en vez de sonar en el instante exacto, cada letra espera la próxima
-  // semicorchea (1/16) del pulso de 126 BPM. Por eso al pasar el mouse rápido por un
-  // título suena "a ritmo" y no como notas sueltas.
+  // Cuantizar: el logo y "agregar" esperan la próxima semicorchea (1/16) del pulso
+  // de 126 BPM, así sus golpes caen siempre a tiempo.
   const SEMI = NEGRA / 4;
   const alPulso = c => Math.max(Math.ceil(c.currentTime / SEMI) * SEMI, c.currentTime + 0.005);
 
@@ -163,24 +166,6 @@
     envolvente(g, t, vol, 0.035, 0.001);
     n.connect(f).connect(g).connect(maestro);
     n.start(t); n.stop(t + 0.05);
-  }
-
-  // Stab de UNA nota (para las letras): diente de sierra + cuadrada una octava abajo,
-  // por un filtro que se cierra rápido; un poco de eco para que quede flotando.
-  function stabNota(c, t, hz, vol = 0.09) {
-    const f = c.createBiquadFilter(), g = c.createGain(), envio = c.createGain();
-    f.type = 'lowpass'; f.Q.value = 5;
-    f.frequency.setValueAtTime(1800, t);
-    f.frequency.exponentialRampToValueAtTime(300, t + 0.18);
-    envolvente(g, t, vol, 0.22, 0.003);
-    envio.gain.value = 0.35;
-    f.connect(g); g.connect(maestro); g.connect(envio).connect(busEco(c));
-    [[hz, 'sawtooth'], [hz / 2, 'square']].forEach(([z, tipo]) => {
-      const o = c.createOscillator();
-      o.type = tipo; o.frequency.value = z;
-      o.connect(f);
-      o.start(t); o.stop(t + 0.26);
-    });
   }
 
   // Hi-hat cerrado al pasar el mouse por un botón.
@@ -201,17 +186,30 @@
     stab(c, t, 0.3, 0.06);
   }
 
-  // Letras de los títulos: La menor natural (La, Do, Re, Mi, Sol...). Cada 4 letras
-  // un hi-hat, y la primera letra lleva un bombo suave: así un título "toca un compás".
-  const ESCALA = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
-  function nota(i = 0, vol = 0.09) {
+  // Bajo de sintetizador (una tecla): seno grave (el cuerpo) + diente de sierra filtrado
+  // (el "gruñido" que hace que se oiga también en parlantes de laptop).
+  function bajoNota(c, t, hz, vol = 0.16) {
+    const g = c.createGain(), f = c.createBiquadFilter();
+    f.type = 'lowpass'; f.Q.value = 3;
+    f.frequency.setValueAtTime(900, t);
+    f.frequency.exponentialRampToValueAtTime(180, t + 0.3);
+    envolvente(g, t, vol, 0.38, 0.004);
+    f.connect(g).connect(maestro);
+    const sierra = c.createOscillator(), seno = c.createOscillator(), gs = c.createGain();
+    sierra.type = 'sawtooth'; sierra.frequency.value = hz;
+    seno.frequency.value = hz; gs.gain.value = 1.4;
+    sierra.connect(f); seno.connect(gs).connect(f);
+    [sierra, seno].forEach(o => { o.start(t); o.stop(t + 0.42); });
+  }
+
+  // Letras de los títulos = un teclado de bajos: cada letra es una tecla de la escala
+  // de La menor en el registro grave (La2 a Re4). Suena al instante, como tocar teclas.
+  const ESCALA = [110, 130.81, 146.83, 164.81, 196, 220, 261.63, 293.66];
+  function nota(i = 0, vol = 0.16) {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    const t = alPulso(c);
-    stabNota(c, t, ESCALA[i % ESCALA.length], vol);
-    if (i % 4 === 0) hatCerrado(c, t);
-    if (i === 0) bomboPunch(c, t, 0.45);
+    bajoNota(c, c.currentTime, ESCALA[i % ESCALA.length], vol);
   }
 
   // Logo del hero: bombo + rumble corto (el "temblor" del sub).
