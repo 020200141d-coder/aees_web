@@ -550,7 +550,9 @@ function initParallax() {
   if (reducirMovimiento || !window.gsap || !window.ScrollTrigger || !$('.hero')) return;
   gsap.registerPlugin(ScrollTrigger);
   const disparo = { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 0.6 };
-  gsap.to('.hero-contenido', { yPercent: 22, opacity: 0.15, ease: 'none', scrollTrigger: disparo });
+  // El texto del hero sube un poco y se atenúa al bajar. Antes BAJABA (yPercent 22) y,
+  // con el logo grande, terminaba encima de las promociones; ahora se aleja de ellas.
+  gsap.to('.hero-contenido', { yPercent: -6, opacity: 0.35, ease: 'none', scrollTrigger: disparo });
   gsap.to('.hero-foto', { yPercent: 12, ease: 'none', scrollTrigger: { ...disparo } });
 }
 

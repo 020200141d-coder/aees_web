@@ -1066,3 +1066,21 @@ input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius
   .hero-b-grid { grid-template-columns: minmax(0, 1fr); }
   .cotizador-rapido { justify-self: start; max-width: 420px; }
 }
+
+/* ══ Separación hero → promociones (2026-11-10) ═══════════════════════════════
+   Con el logo más grande, el hero creció y las tarjetas de promoción (que subían
+   30px sobre él) quedaban encima de los botones "Ver paquetes / WhatsApp" y de las
+   barras del ecualizador. Ahora:
+   • el hero deja un margen fijo abajo (170px) solo para el degradado;
+   • el degradado empieza en los últimos 170px (medida fija, no %), así nunca tapa botones;
+   • las barras del ecualizador se desvanecen antes de llegar al borde;
+   • las promociones empiezan DESPUÉS del hero, como un bloque aparte. */
+.hero-b { padding-bottom: 170px; }
+.hero::after { background: linear-gradient(180deg, rgba(13, 27, 42, 0.2) 0%, rgba(13, 27, 42, 0.42) 55%, rgba(13, 27, 42, 0.5) calc(100% - 170px), var(--bg) 100%), radial-gradient(ellipse at 22% 42%, rgba(13, 27, 42, 0.45), rgba(13, 27, 42, 0.7) 78%); }
+[data-tema="dia"] .hero::after { background: linear-gradient(180deg, rgba(13, 27, 42, 0.2) 0%, rgba(13, 27, 42, 0.42) 50%, rgba(13, 27, 42, 0.4) calc(100% - 170px), rgba(244, 247, 251, 0.8) calc(100% - 40px), #F4F7FB 100%), radial-gradient(ellipse at 22% 42%, rgba(13, 27, 42, 0.45), rgba(13, 27, 42, 0.68) 78%); }
+.hero-canvas, [data-tema="dia"] .hero-canvas { -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent calc(100% - 120px)); mask-image: linear-gradient(180deg, #000 45%, transparent calc(100% - 120px)); }
+.promos, [data-tema="dia"] .promos { margin-top: 0; padding-top: .5rem; }
+/* Mismo selector reforzado: la regla de modo día de más arriba ([data-tema] .hero-b) pesaba más. */
+.hero.hero-b, [data-tema="dia"] .hero.hero-b { padding-bottom: 170px; }
+/* Los haces de luz también se apagan antes del borde (si no, dejaban una línea de corte). */
+.haces { -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent calc(100% - 150px)); mask-image: linear-gradient(180deg, #000 40%, transparent calc(100% - 150px)); }
