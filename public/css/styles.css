@@ -882,6 +882,22 @@ details.clausulas { margin-bottom: .8rem; }
   --primario: #F5A623; --primario-rgb: 245, 166, 35; --secundario: #E8784A; --secundario-rgb: 232, 120, 74;
   color: var(--texto);
 }
+/* Salida del hero en modo día: antes el hero terminaba en su --bg oscuro y debajo empezaba
+   el fondo claro de golpe (un "cuadro oscuro"). Ahora el último tramo se degrada hacia el
+   fondo claro del sitio (#F4F7FB, escrito tal cual porque dentro del hero --bg es oscuro),
+   y se le da más alto abajo para que el paso sea largo y suave. */
+[data-tema="dia"] .hero::after {
+  background:
+    linear-gradient(180deg, rgba(13, 27, 42, 0.35) 0%, rgba(13, 27, 42, 0.55) 45%, rgba(13, 27, 42, 0.45) 68%, rgba(244, 247, 251, 0.75) 90%, #F4F7FB 100%),
+    radial-gradient(ellipse at 20% 40%, rgba(13, 27, 42, 0.2), rgba(13, 27, 42, 0.8) 75%);
+}
+[data-tema="dia"] .hero-b { padding-bottom: 150px; }
+/* Las barras animadas del ecualizador (canvas) llegaban hasta el borde y lo marcaban como
+   una línea; de día se desvanecen hacia abajo junto con el degradado. */
+[data-tema="dia"] .hero-canvas { -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 96%); mask-image: linear-gradient(180deg, #000 55%, transparent 96%); }
+/* Tarjetas de promoción: de noche se montan sobre el borde del hero (margin-top negativo);
+   de día eso las mezclaba con la zona de colores, así que bajan y quedan sobre el fondo claro. */
+[data-tema="dia"] .promos { margin-top: 1.25rem; }
 /* Logo: "ACÚSTICO" toma el color del texto (blanco de noche, azul marino de día). */
 .logo-acustico { fill: var(--texto); }
 [data-tema="dia"] .swal2-container.swal2-backdrop-show:has(> .swal2-modal) { background: rgba(13, 27, 42, 0.45) !important; }
