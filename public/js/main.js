@@ -774,7 +774,7 @@ function initPalabrasSonoras() {
   });
   // Pasar el mouse por el logo del hero "agita" las ondas.
   const logo = $('.hero-logo');
-  logo?.addEventListener('pointerenter', () => { logo.classList.add('vibrando'); AeesSonido.nota(0, 0.12); AeesSonido.nota(4, 0.12); });
+  logo?.addEventListener('pointerenter', () => { logo.classList.add('vibrando'); AeesSonido.logo(); });
   logo?.addEventListener('pointerleave', () => logo.classList.remove('vibrando'));
 }
 

@@ -6,13 +6,14 @@
 //   • Se puede explicar cómo se construye un sonido: osciladores (ondas),
 //     filtros y envolventes de volumen (gain), igual que en una consola.
 //
-//  Intro: "punch" de electro deep (3 bombos a 126 BPM, rumble, stab con eco).
+//  Todo usa el mismo kit de electro deep: intro "punch" (3 bombos a 126 BPM,
+//  rumble, stab con eco), letras = stabs al ritmo, botones = hi-hat cerrado.
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
 //  eso todo empieza con el clic en el botón de volumen del header (la primera
 //  vez suena la intro). La preferencia se recuerda en localStorage.
 //
-//  API global: AeesSonido.activo, activar(), desactivar(), intro(), tick(), confirmar(), nota(i)
+//  API global: AeesSonido.activo, activar(), desactivar(), intro(), tick(), confirmar(), nota(i), logo()
 // ============================================================================
 
 (function () {
@@ -51,16 +52,6 @@
     const fuente = c.createBufferSource();
     fuente.buffer = buffer;
     return fuente;
-  }
-
-  // Bombo: una onda senoidal que baja de 150 Hz a 40 Hz muy rápido.
-  function bombo(c, t, vol = 0.9) {
-    const o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(150, t);
-    o.frequency.exponentialRampToValueAtTime(40, t + 0.35);
-    envolvente(g, t, vol, 0.5, 0.003);
-    o.connect(g).connect(maestro);
-    o.start(t); o.stop(t + 0.55);
   }
 
   // ── Intro: "punch" de electro deep / tech house (~1,8 s) ──────────────────
@@ -158,45 +149,79 @@
     [0, 1, 2].forEach(i => hatAbierto(c, t + i * NEGRA + NEGRA / 2));
   }
 
-  // "Tic" muy suave al pasar el mouse por un botón.
+  // ── El resto del sitio con el mismo kit deep ──────────────────────────────
+  // Cuantizar: en vez de sonar en el instante exacto, cada letra espera la próxima
+  // semicorchea (1/16) del pulso de 126 BPM. Por eso al pasar el mouse rápido por un
+  // título suena "a ritmo" y no como notas sueltas.
+  const SEMI = NEGRA / 4;
+  const alPulso = c => Math.max(Math.ceil(c.currentTime / SEMI) * SEMI, c.currentTime + 0.005);
+
+  // Hi-hat cerrado: ruido muy agudo y cortísimo.
+  function hatCerrado(c, t, vol = 0.06) {
+    const n = ruido(c, 0.05), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'highpass'; f.frequency.value = 9000;
+    envolvente(g, t, vol, 0.035, 0.001);
+    n.connect(f).connect(g).connect(maestro);
+    n.start(t); n.stop(t + 0.05);
+  }
+
+  // Stab de UNA nota (para las letras): diente de sierra + cuadrada una octava abajo,
+  // por un filtro que se cierra rápido; un poco de eco para que quede flotando.
+  function stabNota(c, t, hz, vol = 0.09) {
+    const f = c.createBiquadFilter(), g = c.createGain(), envio = c.createGain();
+    f.type = 'lowpass'; f.Q.value = 5;
+    f.frequency.setValueAtTime(1800, t);
+    f.frequency.exponentialRampToValueAtTime(300, t + 0.18);
+    envolvente(g, t, vol, 0.22, 0.003);
+    envio.gain.value = 0.35;
+    f.connect(g); g.connect(maestro); g.connect(envio).connect(busEco(c));
+    [[hz, 'sawtooth'], [hz / 2, 'square']].forEach(([z, tipo]) => {
+      const o = c.createOscillator();
+      o.type = tipo; o.frequency.value = z;
+      o.connect(f);
+      o.start(t); o.stop(t + 0.26);
+    });
+  }
+
+  // Hi-hat cerrado al pasar el mouse por un botón.
   function tick() {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(1900, t); o.frequency.exponentialRampToValueAtTime(1200, t + 0.04);
-    envolvente(g, t, 0.025, 0.06, 0.002);
-    o.connect(g).connect(maestro);
-    o.start(t); o.stop(t + 0.07);
+    hatCerrado(c, c.currentTime, 0.05);
   }
 
-  // Dos notas ascendentes al agregar algo a "Mi evento".
+  // Agregar a "Mi evento": bombo suave + acorde deep con eco.
   function confirmar() {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    [659.25, 987.77].forEach((hz, i) => {
-      const t = c.currentTime + i * 0.09, o = c.createOscillator(), g = c.createGain();
-      o.type = 'triangle'; o.frequency.value = hz;
-      envolvente(g, t, 0.08, 0.3);
-      o.connect(g).connect(maestro);
-      o.start(t); o.stop(t + 0.32);
-    });
-    bombo(c, c.currentTime, 0.25);
+    const t = alPulso(c);
+    bomboPunch(c, t, 0.5);
+    stab(c, t, 0.3, 0.06);
   }
 
-  // Nota de una escala pentatónica (suena bien en cualquier orden): la i-ésima letra de un título.
-  const ESCALA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51];
-  function nota(i = 0, vol = 0.07) {
+  // Letras de los títulos: La menor natural (La, Do, Re, Mi, Sol...). Cada 4 letras
+  // un hi-hat, y la primera letra lleva un bombo suave: así un título "toca un compás".
+  const ESCALA = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
+  function nota(i = 0, vol = 0.09) {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-    o.type = 'triangle';
-    o.frequency.value = ESCALA[i % ESCALA.length];
-    envolvente(g, t, vol, 0.35, 0.005);
-    o.connect(g).connect(maestro);
-    o.start(t); o.stop(t + 0.4);
+    const t = alPulso(c);
+    stabNota(c, t, ESCALA[i % ESCALA.length], vol);
+    if (i % 4 === 0) hatCerrado(c, t);
+    if (i === 0) bomboPunch(c, t, 0.45);
+  }
+
+  // Logo del hero: bombo + rumble corto (el "temblor" del sub).
+  function logo() {
+    if (!activo) return;
+    const c = contexto();
+    if (!c) return;
+    const t = alPulso(c);
+    bomboPunch(c, t, 0.8);
+    rumble(c, t, 0.5);
   }
 
   function guardar() {
@@ -208,6 +233,6 @@
     get activo() { return activo; },
     activar() { activo = true; contexto(); guardar(); },
     desactivar() { activo = false; guardar(); },
-    intro, tick, confirmar, nota
+    intro, tick, confirmar, nota, logo
   };
 })();
