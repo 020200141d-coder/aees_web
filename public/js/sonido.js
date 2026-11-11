@@ -7,7 +7,8 @@
 //     filtros y envolventes de volumen (gain), igual que en una consola.
 //
 //  Intro "punch" electro deep (un golpe de bombo con clic,
-//  rumble, stab con eco), letras = pluck urbano al ritmo con kicks y 808, botones = hi-hat.
+//  rumble, stab con eco), letras = pluck urbano al ritmo con kicks y 808, botones = hi-hat,
+//  logo y "agregar" = guitarra blues con bend (el bombo fuerte queda solo en la intro).
 //
 //  Los navegadores NO dejan reproducir audio sin una acción del usuario, por
 //  eso todo empieza con el clic en el botón de volumen del header (la primera
@@ -154,11 +155,9 @@
     hatAbierto(c, t + NEGRA / 2, 0.07);
   }
 
-  // ── El resto del sitio con el mismo kit deep ──────────────────────────────
-  // Cuantizar: el logo y "agregar" esperan la próxima semicorchea (1/16) del pulso
-  // de 126 BPM, así sus golpes caen siempre a tiempo.
+  // ── El resto del sitio ──────────────────────────────────────────────────────
+  // Semicorchea (1/16) del pulso de 126 BPM: la usan las letras para caer a tiempo.
   const SEMI = NEGRA / 4;
-  const alPulso = c => Math.max(Math.ceil(c.currentTime / SEMI) * SEMI, c.currentTime + 0.005);
 
   // Hi-hat cerrado: ruido muy agudo y cortísimo.
   function hatCerrado(c, t, vol = 0.06) {
@@ -177,14 +176,66 @@
     hatCerrado(c, c.currentTime, 0.05);
   }
 
-  // Agregar a "Mi evento": bombo suave + acorde deep con eco.
+  // ── Guitarra blues (logo y "agregar a Mi evento") ────────────────────────
+  // El bombo quedó SOLO en la intro; aquí va una nota de guitarra eléctrica fina:
+  //   • cuerda: diente de sierra + su octava, con un overdrive suave (curva tanh)
+  //   • tono: un pasa-bajos que se va cerrando, como una cuerda que pierde brillo
+  //   • "bend" estilo blues: la nota se sostiene un instante y sube un tono entero
+  //     (como empujar la cuerda con el dedo), luego vibra con un vibrato (LFO de 5,5 Hz)
+  //   • un poco del eco del stab, para que quede sonando
+  let overdrive = null;
+  function busOverdrive(c) {
+    if (overdrive) return overdrive;
+    overdrive = c.createWaveShaper();
+    const curva = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) curva[i] = Math.tanh(1.8 * (i / 512 - 1));
+    overdrive.curve = curva;
+    const tono = c.createBiquadFilter();
+    tono.type = 'lowpass'; tono.frequency.value = 3800;
+    overdrive.connect(tono).connect(maestro);
+    return overdrive;
+  }
+
+  function guitarraBlues(c, t, hz, { subeA = hz, dur = 0.9, vol = 0.2, eco: envio = 0.3 } = {}) {
+    const f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'lowpass'; f.Q.value = 1.5;
+    f.frequency.setValueAtTime(3000, t);
+    f.frequency.exponentialRampToValueAtTime(900, t + dur);
+    envolvente(g, t, vol, dur, 0.003);
+    f.connect(g).connect(busOverdrive(c));
+    if (envio) { const e = c.createGain(); e.gain.value = envio; g.connect(e).connect(busEco(c)); }
+
+    const cuerda = c.createOscillator(), octava = c.createOscillator(), go = c.createGain();
+    cuerda.type = 'sawtooth'; go.gain.value = 0.3;
+    [cuerda, octava].forEach((o, i) => {
+      const base = i ? 2 : 1;
+      o.frequency.setValueAtTime(hz * base, t);
+      if (subeA !== hz) {
+        o.frequency.setValueAtTime(hz * base, t + 0.06);
+        o.frequency.exponentialRampToValueAtTime(subeA * base, t + 0.2);
+      }
+    });
+    // Vibrato al final de la nota (solo si hay bend).
+    if (subeA !== hz) {
+      const lfo = c.createOscillator(), prof = c.createGain();
+      lfo.frequency.value = 5.5;
+      prof.gain.setValueAtTime(0, t);
+      prof.gain.linearRampToValueAtTime(subeA * 0.012, t + 0.4);
+      lfo.connect(prof).connect(cuerda.frequency);
+      lfo.start(t); lfo.stop(t + dur);
+    }
+    cuerda.connect(f); octava.connect(go).connect(f);
+    [cuerda, octava].forEach(o => { o.start(t); o.stop(t + dur + 0.05); });
+  }
+
+  // Agregar a "Mi evento": frase blues corta (Mi → Sol que sube a La).
   function confirmar() {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    const t = alPulso(c);
-    bomboPunch(c, t, 0.5);
-    stab(c, t, 0.3, 0.06);
+    const t = c.currentTime + 0.01;
+    guitarraBlues(c, t, 329.63, { dur: 0.22, vol: 0.16, eco: 0 });
+    guitarraBlues(c, t + 0.12, 392, { subeA: 440, dur: 0.8, vol: 0.18 });
   }
 
   // ── Letras de los títulos: pluck urbano al ritmo, con kicks y bajo 808 ─────
@@ -247,14 +298,12 @@
     if (i % 8 === 0) bajo808(c, t, BAJOS[(i / 8) % BAJOS.length]);
   }
 
-  // Logo del hero: bombo + rumble corto (el "temblor" del sub).
+  // Logo del hero: una nota de guitarra blues que sube un tono (Sol → La) y vibra.
   function logo() {
     if (!activo) return;
     const c = contexto();
     if (!c) return;
-    const t = alPulso(c);
-    bomboPunch(c, t, 0.8);
-    rumble(c, t, 0.5);
+    guitarraBlues(c, c.currentTime + 0.01, 392, { subeA: 440, dur: 1, vol: 0.2 });
   }
 
   function guardar() {
