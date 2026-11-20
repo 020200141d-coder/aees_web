@@ -26,9 +26,10 @@ const { hashClave, verificarClave, limitar } = require('../lib/seguridad');
 const { CATEGORIAS, TIPOS_EVENTO, ESTADOS_RESERVA, texto, numero, hoyLima } = require('../lib/util');
 const util = require('../lib/util');
 const TABLAS = require('../db/tablas');
+const { a, volverSeguro, volverA } = require('../controladores/comun');
+const ctlEquipos = require('../controladores/admin/equipos');
 
 const router = express.Router();
-const a = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const soloAdmin = requiereStaff();
 const staff = requiereStaff('publicador');
 
@@ -51,29 +52,12 @@ router.use(async (req, res, next) => {
   next();
 });
 
-// ── Helpers de formularios ──────────────────────────────────────────────────
-const marcado = v => v === 'on' || v === 'true' || v === true;
-const entero = (v, def = 0) => Math.round(numero(v, def));
-const urlImagen = v => {
-  const s = texto(v, 600);
-  return !s || /^https:\/\/\S+$/.test(s) || /^\/(img|uploads)\/\S+$/.test(s) ? s : null;
-};
-const opcional = v => (v === '' || v == null ? null : numero(v, null));
+// Conversores de campos de formulario (compartidos con los validadores).
+const { marcado, entero, urlImagen, opcional } = require('../validadores/formulario');
 
 // ── Ingreso del personal ────────────────────────────────────────────────────
 const HASH_FALSO = hashClave(crypto.randomBytes(12).toString('hex'));
 const limiteLogin = limitar({ clave: 'admin-login', max: 8, ventanaMin: 15, mensaje: 'Demasiados intentos. Espera 15 minutos.' });
-const volverSeguro = v => (typeof v === 'string' && /^\/admin(\/|$|\?)/.test(v) ? v : '/admin');
-// Express 5 ya no acepta redirect('back'): volvemos a la página anterior solo si es del panel.
-const volverA = (req, porDefecto) => {
-  try {
-    const u = new URL(req.get('referer'));
-    return u.host === req.get('host') ? volverSeguro(u.pathname + u.search) : porDefecto;
-  } catch {
-    return porDefecto;
-  }
-};
-
 router.get('/ingresar', (req, res) => {
   if (['admin', 'publicador'].includes(req.usuario?.rol)) return res.redirect('/admin');
   // Aviso de una sola vez cuando la sesión se cerró por inactividad.
@@ -152,122 +136,16 @@ router.post('/fotos', staff, a(async (req, res) => {
 }));
 
 // ── Equipos (admin) ─────────────────────────────────────────────────────────
-function leerEquipo(b) {
-  const d = {
-    codigo: texto(b.codigo, 30).toUpperCase(),
-    nombre: texto(b.nombre, 120),
-    marca: texto(b.marca, 60),
-    modelo: texto(b.modelo, 60),
-    categoria: b.categoria,
-    rol: texto(b.rol, 30).toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-    descripcion: String(b.descripcion || '').trim().slice(0, 1500),
-    precio: numero(b.precio, NaN),
-    precio_mayor: opcional(b.precio_mayor),
-    mayor_desde: opcional(b.mayor_desde),
-    ajuste_sin_dmx: numero(b.ajuste_sin_dmx, 0),
-    precio_adicional: opcional(b.precio_adicional),
-    cantidad_total: entero(b.cantidad_total, NaN),
-    potencia_w: entero(b.potencia_w),
-    spl_db: opcional(b.spl_db),
-    cobertura_personas: opcional(b.cobertura_personas),
-    dimensiones: texto(b.dimensiones, 80),
-    volumen_l: numero(b.volumen_l, 0),
-    peso_kg: numero(b.peso_kg, 0),
-    largo_cm: entero(b.largo_cm),
-    imagen: urlImagen(b.imagen),
-    imagen_fuente: texto(b.imagen_fuente, 160),
-    // Enlace a la página de la foto: las licencias Creative Commons piden citar autor y fuente.
-    imagen_fuente_url: /^https:\/\/\S+$/.test(String(b.imagen_fuente_url || '').trim()) ? String(b.imagen_fuente_url).trim().slice(0, 400) : '',
-    estado: ['operativo', 'mantenimiento', 'baja'].includes(b.estado) ? b.estado : 'operativo',
-    publicado: marcado(b.publicado),
-    destacado: marcado(b.destacado),
-    orden: entero(b.orden)
-  };
-  const e = {};
-  if (!/^[A-Z0-9-]{2,30}$/.test(d.codigo)) e.codigo = 'Código de 2 a 30 caracteres: letras, números o guiones.';
-  if (d.nombre.length < 2) e.nombre = 'El nombre es obligatorio.';
-  if (!CATEGORIAS[d.categoria]) e.categoria = 'Elige una categoría.';
-  if (!d.rol) e.rol = 'El rol es obligatorio (lo usa el recomendador).';
-  if (!(d.precio >= 0)) e.precio = 'El precio debe ser 0 o mayor.';
-  if (d.precio_mayor != null && !(d.precio_mayor >= 0)) e.precio_mayor = 'Debe ser 0 o mayor.';
-  if ((d.precio_mayor == null) !== (d.mayor_desde == null)) e.mayor_desde = 'Completa ambos: precio por cantidad y desde cuántas unidades.';
-  if (d.mayor_desde != null && !(d.mayor_desde >= 2)) e.mayor_desde = 'Desde 2 unidades o más.';
-  if (d.precio_adicional != null && !(d.precio_adicional >= 0)) e.precio_adicional = 'Debe ser 0 o mayor.';
-  if (!(d.cantidad_total >= 0)) e.cantidad_total = 'La cantidad debe ser 0 o mayor.';
-  if (d.volumen_l < 0 || d.peso_kg < 0 || d.largo_cm < 0) e.volumen_l = 'Medidas en 0 o mayores.';
-  if (d.imagen === null) e.imagen = 'Pega una URL https o sube una foto.';
-  return { datos: d, errores: e };
-}
-
-const rolesConocidos = async () => [...new Set((await db.listar('equipos')).map(e => e.rol))].sort();
-
-router.get('/equipos', soloAdmin, a(async (req, res) => {
-  const q = texto(req.query.q, 60).toLowerCase();
-  const cat = CATEGORIAS[req.query.categoria] ? req.query.categoria : '';
-  let equipos = await db.listar('equipos', { orden: 'orden' });
-  if (cat) equipos = equipos.filter(e => e.categoria === cat);
-  if (q) equipos = equipos.filter(e => `${e.nombre} ${e.marca} ${e.modelo} ${e.codigo}`.toLowerCase().includes(q));
-  const libresHoy = await catalogo.disponibilidad(hoyLima());
-  res.render('admin/equipos', { titulo: 'Equipos', equipos, q, cat, libresHoy });
-}));
-
-router.get('/equipos/nuevo', soloAdmin, a(async (req, res) => {
-  res.render('admin/equipo-form', { titulo: 'Nuevo equipo', e: { categoria: 'audio', estado: 'operativo', publicado: true, precio: '', cantidad_total: 1, ajuste_sin_dmx: 0 }, errores: {}, nuevo: true, roles: await rolesConocidos() });
-}));
-
-router.post('/equipos', soloAdmin, a(async (req, res) => {
-  const { datos, errores } = leerEquipo(req.body);
-  const id = datos.codigo.toLowerCase();
-  if (!errores.codigo && await db.obtener('equipos', id)) errores.codigo = 'Ya existe un equipo con ese código.';
-  if (Object.keys(errores).length) return res.status(400).render('admin/equipo-form', { titulo: 'Nuevo equipo', e: { ...req.body, ...datos }, errores, nuevo: true, roles: await rolesConocidos() });
-  await db.insertar('equipos', { id, ...datos });
-  req.flash('exito', `Equipo «${datos.nombre}» creado.`);
-  res.redirect('/admin/equipos');
-}));
-
-router.get('/equipos/:id/editar', soloAdmin, a(async (req, res, next) => {
-  const e = await db.obtener('equipos', req.params.id);
-  if (!e) return next();
-  res.render('admin/equipo-form', { titulo: `Editar ${e.nombre}`, e, errores: {}, nuevo: false, roles: await rolesConocidos() });
-}));
-
-router.post('/equipos/:id', soloAdmin, a(async (req, res, next) => {
-  const actual = await db.obtener('equipos', req.params.id);
-  if (!actual) return next();
-  const { datos, errores } = leerEquipo(req.body);
-  if (Object.keys(errores).length) return res.status(400).render('admin/equipo-form', { titulo: `Editar ${actual.nombre}`, e: { ...actual, ...datos }, errores, nuevo: false, roles: await rolesConocidos() });
-  await db.actualizar('equipos', actual.id, datos);
-  req.flash('exito', `Cambios guardados en «${datos.nombre}».`);
-  res.redirect('/admin/equipos');
-}));
-
-// Interruptor rápido desde la tabla: publicado sí/no.
-router.post('/equipos/:id/publicado', soloAdmin, a(async (req, res, next) => {
-  const e = await db.obtener('equipos', req.params.id);
-  if (!e) return next();
-  await db.actualizar('equipos', e.id, { publicado: !e.publicado });
-  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, publicado: !e.publicado });
-  res.redirect(volverA(req, '/admin/equipos'));
-}));
-
-router.post('/equipos/:id/estado', soloAdmin, a(async (req, res, next) => {
-  const e = await db.obtener('equipos', req.params.id);
-  if (!e || !['operativo', 'mantenimiento', 'baja'].includes(req.body.estado)) return next();
-  await db.actualizar('equipos', e.id, { estado: req.body.estado });
-  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, estado: req.body.estado });
-  res.redirect(volverA(req, '/admin/equipos'));
-}));
-
-router.post('/equipos/:id/eliminar', soloAdmin, a(async (req, res) => {
-  const enCombos = (await db.listar('combos')).filter(c => [...(c.items || []), ...(c.adicionales || [])].some(it => it.equipo_id === req.params.id));
-  if (enCombos.length) {
-    req.flash('error', `No se puede eliminar: está en ${enCombos.map(c => `«${c.nombre}»`).join(', ')}. Quítalo de esos combos o despublícalo.`);
-  } else {
-    await db.eliminar('equipos', req.params.id);
-    req.flash('exito', 'Equipo eliminado.');
-  }
-  res.redirect('/admin/equipos');
-}));
+// Solo URL + permiso: la lógica está en controladores/admin/equipos.js,
+// las reglas en servicios/equipos.js y la validación en validadores/equipos.js.
+router.get('/equipos', soloAdmin, a(ctlEquipos.lista));
+router.get('/equipos/nuevo', soloAdmin, a(ctlEquipos.nuevo));
+router.post('/equipos', soloAdmin, a(ctlEquipos.crear));
+router.get('/equipos/:id/editar', soloAdmin, a(ctlEquipos.editar));
+router.post('/equipos/:id', soloAdmin, a(ctlEquipos.guardar));
+router.post('/equipos/:id/publicado', soloAdmin, a(ctlEquipos.alternarPublicado));
+router.post('/equipos/:id/estado', soloAdmin, a(ctlEquipos.cambiarEstado));
+router.post('/equipos/:id/eliminar', soloAdmin, a(ctlEquipos.eliminar));
 
 // ── Combos (publicador y admin) ─────────────────────────────────────────────
 function leerCombo(b, mapa) {
