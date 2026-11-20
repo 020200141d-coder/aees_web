@@ -28,6 +28,7 @@ const util = require('../lib/util');
 const TABLAS = require('../db/tablas');
 const { a, volverSeguro, volverA } = require('../controladores/comun');
 const ctlEquipos = require('../controladores/admin/equipos');
+const ctlCombos = require('../controladores/admin/combos');
 
 const router = express.Router();
 const soloAdmin = requiereStaff();
@@ -148,97 +149,13 @@ router.post('/equipos/:id/estado', soloAdmin, a(ctlEquipos.cambiarEstado));
 router.post('/equipos/:id/eliminar', soloAdmin, a(ctlEquipos.eliminar));
 
 // ── Combos (publicador y admin) ─────────────────────────────────────────────
-function leerCombo(b, mapa) {
-  const filas = v => (Array.isArray(v) ? v : Object.values(v || {}));
-  const items = filas(b.items).map(it => ({ equipo_id: String(it.equipo_id || ''), cantidad: entero(it.cantidad) })).filter(it => mapa[it.equipo_id] && it.cantidad > 0);
-  const adicionales = filas(b.adicionales)
-    .map(it => ({ equipo_id: String(it.equipo_id || ''), cantidad: entero(it.cantidad), precio: numero(it.precio, NaN), etiqueta: texto(it.etiqueta, 80) }))
-    .filter(it => mapa[it.equipo_id] && it.cantidad > 0);
-  const d = {
-    nombre: texto(b.nombre, 100),
-    nivel: ['esencial', 'fiesta', 'produccion'].includes(b.nivel) ? b.nivel : 'esencial',
-    descripcion: String(b.descripcion || '').trim().slice(0, 1500),
-    tipos_evento: [].concat(b.tipos_evento || []).filter(t => TIPOS_EVENTO[t]),
-    personas_min: entero(b.personas_min),
-    personas_max: entero(b.personas_max, 100),
-    horas_base: entero(b.horas_base, 4),
-    precio: numero(b.precio, NaN),
-    items,
-    adicionales: adicionales.map(x => ({ ...x, etiqueta: x.etiqueta || `${x.cantidad}× ${mapa[x.equipo_id].nombre}` })),
-    imagen: urlImagen(b.imagen),
-    imagen_fuente: texto(b.imagen_fuente, 120),
-    publicado: marcado(b.publicado),
-    destacado: marcado(b.destacado),
-    orden: entero(b.orden)
-  };
-  const e = {};
-  if (d.nombre.length < 3) e.nombre = 'El nombre es obligatorio.';
-  if (!(d.precio >= 0)) e.precio = 'El precio debe ser 0 o mayor.';
-  if (!d.items.length) e.items = 'Agrega al menos un equipo al combo.';
-  if (d.adicionales.some(x => !(x.precio >= 0))) e.adicionales = 'Cada adicional necesita un precio de 0 o más.';
-  if (!d.tipos_evento.length) e.tipos_evento = 'Marca al menos un tipo de evento (lo usa el asistente para sugerirlo).';
-  if (d.personas_min < 0 || d.personas_max < d.personas_min) e.personas_max = 'El máximo debe ser mayor o igual al mínimo.';
-  if (!(d.horas_base >= 1 && d.horas_base <= 24)) e.horas_base = 'Entre 1 y 24 horas.';
-  if (d.imagen === null) e.imagen = 'Pega una URL https o sube una foto.';
-  return { datos: d, errores: e };
-}
-
-const datosForm = async () => {
-  const equipos = await db.listar('equipos', { orden: 'orden' });
-  return { equipos, mapa: catalogo.mapaPorId(equipos) };
-};
-
-router.get('/combos', staff, a(async (req, res) => {
-  const [combos, { mapa }] = await Promise.all([db.listar('combos', { orden: 'orden' }), datosForm()]);
-  res.render('admin/combos', { titulo: 'Combos', combos, mapa });
-}));
-
-router.get('/combos/nuevo', staff, a(async (req, res) => {
-  const { equipos } = await datosForm();
-  res.render('admin/combo-form', { titulo: 'Nuevo combo', c: { nivel: 'esencial', tipos_evento: [], personas_min: 20, personas_max: 100, horas_base: 4, items: [], adicionales: [], publicado: true }, errores: {}, nuevo: true, equipos });
-}));
-
-router.post('/combos', staff, a(async (req, res) => {
-  const { equipos, mapa } = await datosForm();
-  const { datos, errores } = leerCombo(req.body, mapa);
-  if (Object.keys(errores).length) return res.status(400).render('admin/combo-form', { titulo: 'Nuevo combo', c: datos, errores, nuevo: true, equipos });
-  const id = datos.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
-  await db.insertar('combos', { ...datos, id: (await db.obtener('combos', id)) ? `${id}-${crypto.randomUUID().slice(0, 4)}` : id });
-  req.flash('exito', `Combo «${datos.nombre}» creado.`);
-  res.redirect('/admin/combos');
-}));
-
-router.get('/combos/:id/editar', staff, a(async (req, res, next) => {
-  const c = await db.obtener('combos', req.params.id);
-  if (!c) return next();
-  const { equipos } = await datosForm();
-  res.render('admin/combo-form', { titulo: `Editar ${c.nombre}`, c, errores: {}, nuevo: false, equipos });
-}));
-
-router.post('/combos/:id', staff, a(async (req, res, next) => {
-  const actual = await db.obtener('combos', req.params.id);
-  if (!actual) return next();
-  const { equipos, mapa } = await datosForm();
-  const { datos, errores } = leerCombo(req.body, mapa);
-  if (Object.keys(errores).length) return res.status(400).render('admin/combo-form', { titulo: `Editar ${actual.nombre}`, c: { ...actual, ...datos }, errores, nuevo: false, equipos });
-  await db.actualizar('combos', actual.id, datos);
-  req.flash('exito', `Combo «${datos.nombre}» guardado.`);
-  res.redirect('/admin/combos');
-}));
-
-router.post('/combos/:id/publicado', staff, a(async (req, res, next) => {
-  const c = await db.obtener('combos', req.params.id);
-  if (!c) return next();
-  await db.actualizar('combos', c.id, { publicado: !c.publicado });
-  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, publicado: !c.publicado });
-  res.redirect('/admin/combos');
-}));
-
-router.post('/combos/:id/eliminar', staff, a(async (req, res) => {
-  await db.eliminar('combos', req.params.id);
-  req.flash('exito', 'Combo eliminado.');
-  res.redirect('/admin/combos');
-}));
+router.get('/combos', staff, a(ctlCombos.lista));
+router.get('/combos/nuevo', staff, a(ctlCombos.nuevo));
+router.post('/combos', staff, a(ctlCombos.crear));
+router.get('/combos/:id/editar', staff, a(ctlCombos.editar));
+router.post('/combos/:id', staff, a(ctlCombos.guardar));
+router.post('/combos/:id/publicado', staff, a(ctlCombos.alternarPublicado));
+router.post('/combos/:id/eliminar', staff, a(ctlCombos.eliminar));
 
 // ── Galería / publicaciones (publicador y admin) ────────────────────────────
 const TIPOS_PUB = { boda: 'Boda', fiesta: 'Fiesta', concierto: 'Concierto', corporativo: 'Corporativo', conferencia: 'Conferencia / ceremonia', electronica: 'Electrónica' };
