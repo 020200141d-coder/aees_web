@@ -15,14 +15,17 @@
 //
 //  `campo` (opcional) indica qué input del formulario causó el error, para
 //  mostrar el mensaje junto a ese campo al volver a pintar el formulario.
+//  `extra` (opcional) lleva datos para la vista, por ejemplo { pedirPin: true }
+//  para que el formulario de ingreso muestre el campo del PIN.
 // ============================================================================
 
 class ErrorNegocio extends Error {
-  constructor(mensaje, status = 400, { campo = null } = {}) {
+  constructor(mensaje, status = 400, { campo = null, extra = null } = {}) {
     super(mensaje);
     this.name = 'ErrorNegocio';
     this.status = status;
     this.campo = campo;
+    this.extra = extra;
     this.publico = true; // el manejador central puede mostrar el mensaje tal cual
   }
 }
