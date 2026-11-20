@@ -46,4 +46,16 @@ async function accionPanel(req, res, { hacer, exito, volver }) {
   res.redirect(typeof volver === 'function' ? volver() : volver);
 }
 
-module.exports = { a, quiereJson, volverSeguro, volverA, accionPanel };
+// Igual que accionPanel pero para la API JSON: si el servicio lanza un
+// ErrorNegocio, responde { ok: false, error, ...extra } con su status
+// (extra = por ejemplo { campos } para marcar los inputs del formulario).
+async function accionJson(res, hacer) {
+  try {
+    res.json({ ok: true, ...(await hacer()) });
+  } catch (err) {
+    if (!esErrorNegocio(err)) throw err;
+    res.status(err.status).json({ ok: false, error: err.message, ...(err.extra || {}) });
+  }
+}
+
+module.exports = { a, quiereJson, volverSeguro, volverA, accionPanel, accionJson };
