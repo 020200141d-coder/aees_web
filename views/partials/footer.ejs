@@ -2,9 +2,10 @@
   footer.ejs — pie, botones flotantes (Google, WhatsApp y volver arriba), cursor y scripts.
   El botón de Google (con su "G" de colores) solo aparece si el visitante no ha ingresado.
   El WhatsApp flotante lleva una burbuja "¿Cotizamos tu evento?" que aparece a los 6 s,
-  una vez por visita (main.js → initBurbujaWa), para que el contacto llame la atención.
+  una vez por visita (sitio/preferencias.js → initBurbujaWa), para que el contacto llame la atención.
   `scripts` (opcional) = lista de scripts extra de la página (asistente.js, mi-evento.js...).
-  Orden: librerías por CDN → evento.js (carrito compartido) → main.js → scripts de la página.
+  Orden: librerías por CDN → evento.js (carrito compartido) → módulos de sitio/ (base.js
+  primero) → main.js (los arranca) → scripts de la página.
 %>
 <footer class="footer">
   <div class="contenedor">
@@ -75,6 +76,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="/js/sonido.js?v=<%= v %>"></script>
 <script src="/js/evento.js?v=<%= v %>"></script>
+<%# Módulos del sitio público (antes todo estaba en main.js). base.js va primero. %>
+<% ['base', 'navegacion', 'animaciones', 'catalogo', 'galeria', 'carrusel', 'contacto', 'sonido-ui', 'preferencias'].forEach(m => { %><script src="/js/sitio/<%= m %>.js?v=<%= v %>"></script>
+<% }) %>
 <script src="/js/main.js?v=<%= v %>"></script>
 <% (typeof scripts !== 'undefined' ? scripts : []).forEach(s => { %><script src="<%= s %>?v=<%= v %>"></script>
 <% }) %>
