@@ -29,6 +29,7 @@ const TABLAS = require('../db/tablas');
 const { a, volverSeguro, volverA } = require('../controladores/comun');
 const ctlEquipos = require('../controladores/admin/equipos');
 const ctlCombos = require('../controladores/admin/combos');
+const ctlGaleria = require('../controladores/admin/galeria');
 
 const router = express.Router();
 const soloAdmin = requiereStaff();
@@ -158,69 +159,13 @@ router.post('/combos/:id/publicado', staff, a(ctlCombos.alternarPublicado));
 router.post('/combos/:id/eliminar', staff, a(ctlCombos.eliminar));
 
 // ── Galería / publicaciones (publicador y admin) ────────────────────────────
-const TIPOS_PUB = { boda: 'Boda', fiesta: 'Fiesta', concierto: 'Concierto', corporativo: 'Corporativo', conferencia: 'Conferencia / ceremonia', electronica: 'Electrónica' };
-
-function leerPublicacion(b) {
-  const d = {
-    titulo: texto(b.titulo, 100),
-    tipo: TIPOS_PUB[b.tipo] ? b.tipo : 'fiesta',
-    texto: String(b.texto || '').trim().slice(0, 600),
-    imagen: urlImagen(b.imagen),
-    imagen_fuente: texto(b.imagen_fuente, 120),
-    publicado: marcado(b.publicado),
-    orden: entero(b.orden)
-  };
-  const e = {};
-  if (d.titulo.length < 3) e.titulo = 'El título es obligatorio.';
-  if (!d.imagen) e.imagen = 'Sube una foto o pega una URL https.';
-  return { datos: d, errores: e };
-}
-
-router.get('/galeria', staff, a(async (req, res) => {
-  res.render('admin/galeria', { titulo: 'Galería', publicaciones: await db.listar('publicaciones', { orden: 'orden' }), TIPOS_PUB });
-}));
-
-router.get('/galeria/nueva', staff, (req, res) => {
-  res.render('admin/publicacion-form', { titulo: 'Nueva publicación', p: { tipo: 'boda', publicado: true, imagen_fuente: 'AeeS Acústico (foto propia)' }, errores: {}, nuevo: true, TIPOS_PUB });
-});
-
-router.post('/galeria', staff, a(async (req, res) => {
-  const { datos, errores } = leerPublicacion(req.body);
-  if (Object.keys(errores).length) return res.status(400).render('admin/publicacion-form', { titulo: 'Nueva publicación', p: datos, errores, nuevo: true, TIPOS_PUB });
-  await db.insertar('publicaciones', datos);
-  req.flash('exito', 'Publicación agregada a la galería.');
-  res.redirect('/admin/galeria');
-}));
-
-router.get('/galeria/:id/editar', staff, a(async (req, res, next) => {
-  const p = await db.obtener('publicaciones', req.params.id);
-  if (!p) return next();
-  res.render('admin/publicacion-form', { titulo: 'Editar publicación', p, errores: {}, nuevo: false, TIPOS_PUB });
-}));
-
-router.post('/galeria/:id', staff, a(async (req, res, next) => {
-  const actual = await db.obtener('publicaciones', req.params.id);
-  if (!actual) return next();
-  const { datos, errores } = leerPublicacion(req.body);
-  if (Object.keys(errores).length) return res.status(400).render('admin/publicacion-form', { titulo: 'Editar publicación', p: { ...actual, ...datos }, errores, nuevo: false, TIPOS_PUB });
-  await db.actualizar('publicaciones', actual.id, datos);
-  req.flash('exito', 'Publicación guardada.');
-  res.redirect('/admin/galeria');
-}));
-
-router.post('/galeria/:id/publicado', staff, a(async (req, res, next) => {
-  const p = await db.obtener('publicaciones', req.params.id);
-  if (!p) return next();
-  await db.actualizar('publicaciones', p.id, { publicado: !p.publicado });
-  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, publicado: !p.publicado });
-  res.redirect('/admin/galeria');
-}));
-
-router.post('/galeria/:id/eliminar', staff, a(async (req, res) => {
-  await db.eliminar('publicaciones', req.params.id);
-  req.flash('exito', 'Publicación eliminada.');
-  res.redirect('/admin/galeria');
-}));
+router.get('/galeria', staff, a(ctlGaleria.lista));
+router.get('/galeria/nueva', staff, ctlGaleria.nueva);
+router.post('/galeria', staff, a(ctlGaleria.crear));
+router.get('/galeria/:id/editar', staff, a(ctlGaleria.editar));
+router.post('/galeria/:id', staff, a(ctlGaleria.guardar));
+router.post('/galeria/:id/publicado', staff, a(ctlGaleria.alternarPublicado));
+router.post('/galeria/:id/eliminar', staff, a(ctlGaleria.eliminar));
 
 // ── Reservas (admin) ────────────────────────────────────────────────────────
 router.get('/reservas', soloAdmin, a(async (req, res) => {
@@ -431,41 +376,11 @@ router.post('/pagos/:id/:accion', soloAdmin, a(async (req, res, next) => {
 }));
 
 // ── Reseñas (admin y publicador) ────────────────────────────────────────────
-// CRUD sobre src/servicios/resenas.js. Las de clientes llegan sin publicar.
-router.get('/resenas', staff, a(async (req, res) => {
-  const lista = await resenas.todas();
-  const editar = req.query.editar ? lista.find(x => x.id === req.query.editar) || null : null;
-  res.render('admin/resenas', { titulo: 'Reseñas', lista: [...lista].reverse(), editar, datos: editar || {}, errores: {} });
-}));
-
-async function guardarResena(req, res, id) {
-  const { datos, errores } = resenas.validar(req.body);
-  datos.publicado = marcado(req.body.publicado);
-  datos.orden = entero(req.body.orden, 0);
-  if (Object.keys(errores).length) {
-    const lista = await resenas.todas();
-    return res.status(400).render('admin/resenas', { titulo: 'Reseñas', lista: [...lista].reverse(), editar: id ? { id } : null, datos, errores });
-  }
-  if (id) await resenas.actualizar(id, datos); else await resenas.agregar(datos, { origen: 'admin', publicado: datos.publicado });
-  req.flash('exito', id ? 'Reseña actualizada.' : 'Reseña agregada.');
-  res.redirect('/admin/resenas');
-}
-router.post('/resenas', staff, a((req, res) => guardarResena(req, res, null)));
-router.post('/resenas/:id', staff, a((req, res) => guardarResena(req, res, req.params.id)));
-
-router.post('/resenas/:id/publicado', staff, a(async (req, res, next) => {
-  const x = (await resenas.todas()).find(r => r.id === req.params.id);
-  if (!x) return next();
-  await resenas.actualizar(x.id, { publicado: !x.publicado });
-  if (req.get('accept')?.includes('application/json')) return res.json({ ok: true, publicado: !x.publicado });
-  res.redirect('/admin/resenas');
-}));
-
-router.post('/resenas/:id/eliminar', staff, a(async (req, res) => {
-  await resenas.eliminar(req.params.id);
-  req.flash('exito', 'Reseña eliminada.');
-  res.redirect('/admin/resenas');
-}));
+router.get('/resenas', staff, a(ctlGaleria.resenasLista));
+router.post('/resenas', staff, a(ctlGaleria.resenaCrear));
+router.post('/resenas/:id', staff, a(ctlGaleria.resenaGuardar));
+router.post('/resenas/:id/publicado', staff, a(ctlGaleria.resenaAlternarPublicado));
+router.post('/resenas/:id/eliminar', staff, a(ctlGaleria.resenaEliminar));
 
 // ── Clientes (admin) ────────────────────────────────────────────────────────
 // El admin registra clientes que llegan por WhatsApp o en persona: con su
